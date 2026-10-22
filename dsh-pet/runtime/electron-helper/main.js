@@ -52,6 +52,10 @@ const { readFileSync, writeFileSync } = require('node:fs');
 const fsPromises = require('node:fs/promises');
 // 点击穿透兜底通道的纯判定（不依赖 Electron 的 forward 鼠标钩子；见文件头注释）
 const { decideWindowIgnore, pointerZone } = require('./pointer-target.js');
+// Linux 专用：X11 指针实时查询（见 x11-pointer.js 文件头）。桌面宠物窗口在穿透状态下收不到
+// 任何鼠标事件，Chromium 的 screen.getCursorScreenPoint() 在 X11 上会因此冻结在旧坐标——
+// 兜底轮询拿着陈旧坐标算，宠物永远翻不成可交互。这里直接问 X server。
+const { createLinuxPointer } = require('./x11-pointer.js');
 // 置顶看门狗：WS_EX_TOPMOST 只是样式位，不等于窗口真的在置顶带（见 topmost-watchdog.js 头部）
 const {
   TOPMOST_WATCHDOG_TICK_MS,
@@ -66,6 +70,20 @@ const { shouldLinearize, resolveForcedScale, resolvePetScale } = require('./dpi-
 // 托盘的平台差异（模板图 / 左键是否自动弹菜单 / Dock）：规则住在模块里，main.js 只接线
 const { trayPlatform } = require('./tray-platform.js');
 const { buildDeskGeometry } = require('./desktop-geometry.js');
+
+/** Linux 指针提供者：仅在 Linux 创建；查询失败时 get() 返回 null（调用方回退 Electron 原生 API） */
+const linuxPointer = process.platform === 'linux' ? createLinuxPointer() : null;
+
+/**
+ * 当前光标位置（DIP）。
+ * Linux：X11 QueryPointer 的实时值（物理像素 ÷ 缩放）；其余平台或查询尚未就绪：Electron 原生 API。
+ */
+function currentPointer() {
+  const raw = linuxPointer && linuxPointer.get();
+  if (!raw) return screen.getCursorScreenPoint();
+  const scale = screen.getPrimaryDisplay().scaleFactor || 1;
+  return scale === 1 ? raw : { x: Math.round(raw.x / scale), y: Math.round(raw.y / scale) };
+}
 
 // 允许无用户手势直接播放（余额动画等）
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -498,7 +516,7 @@ function createPetWindows() {
       if (b.width < 8 || b.height < 8) return; // 尺寸还没落定（renderer 首帧上报前）
       const ignoring = windowIgnore.get(win.id) !== false;
       const busy = inputBusy.get(win.id) === true;
-      const point = screen.getCursorScreenPoint();
+      const point = currentPointer();
       // 余量区停留计时：只在"非 busy 且在余量区"时累加，离开余量区即清零；busy 期间不累加。
       const mg = winMargins.get(win.id);
       const zone = pointerZone(b, point, mg);
@@ -848,6 +866,7 @@ app.whenReady().then(() => {
   // 托盘：不 await（建窗与建托盘互不依赖），内部自己等 bridge 回调服务就绪
   void startTray();
 
+  linuxPointer?.start();
   createPetWindows();
 
   // 宠物窗口跟随：renderer 逐帧上报窗口内容区位置/尺寸
