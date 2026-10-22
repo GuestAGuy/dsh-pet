@@ -115,6 +115,7 @@ import {
   normalizeBroadcastText,
 } from './broadcast';
 import { decideAnim } from './anim';
+import { judgeRequestOrigin } from './request-guard';
 import { LockStore } from './lock';
 import { MENU_WAIT_MAX_MS, MenuRegistry } from './menu';
 import { decidePosition, decideThrow, positionLeafData } from './motion-cue';
@@ -2372,6 +2373,14 @@ export function apply(ctx: any): void {
         kind: 'prefix',
         path: ROUTE_PREFIX,
         handler: async (req: IncomingMessage, res: ServerResponse) => {
+          // CSRF 防线（见 ./request-guard）：浏览器跨站请求在**读 body 之前**拒绝。
+          // 恶意页面能用"简单请求"（text/plain + JSON 正文）绕过 CORS 预检，却绕不过来源判定；
+          // 不带 Origin / Sec-Fetch-Site 的非浏览器调用方（curl、脚本、桌面管道）行为完全不变。
+          const verdict = judgeRequestOrigin(req.headers);
+          if (!verdict.ok) {
+            sendJson(res, 403, { error: verdict.message, reason: verdict.reason });
+            return;
+          }
           // 挂起等待（/playback?wait=）期间调用方可能提前断开：据此中止等待，
           // 否则那个等待者要一直留到超时才回收。'close' 在正常应答后也会触发，但那时监听已摘掉。
           const abort = new AbortController();

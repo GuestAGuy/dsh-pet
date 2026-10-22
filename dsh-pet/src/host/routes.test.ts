@@ -133,7 +133,7 @@ before(() => {
   });
   assert.ok(handler, 'apply() 应注册 /dsh-pet-7340 prefix handler'); // 注册失败则整份测试无意义
 
-  call = (url: string, method = 'GET', body?: string) =>
+  call = (url: string, method = 'GET', body?: string, headers?: Record<string, string>) =>
     new Promise<Result>((done) => {
       const res = new FakeRes();
       res.on('finish', () => done({ status: res.status, body: Buffer.concat(res.chunks).toString('utf8') }));
@@ -143,6 +143,7 @@ before(() => {
         {
           method,
           url,
+          headers,
           on: (event: string, cb: (chunk?: Buffer) => void) => {
             if (event === 'data' && body !== undefined) queueMicrotask(() => cb(Buffer.from(body, 'utf8')));
             if (event === 'end') queueMicrotask(() => cb());
@@ -821,5 +822,51 @@ describe('对外 Cordis 服务 —— 第三方注册余额查询', () => {
       dispose();
     }
     assert.equal(api().list().external.includes('route-test-plugin'), false);
+  });
+});
+
+describe('CSRF 防线 —— 浏览器跨站请求在 handler 层被拒绝', () => {
+  // 这一层测的是「注册出去的 handler 真的挂上了门」，而不是只测纯函数：判定逻辑对但忘了接线，
+  // 在本项目的历史上比写错逻辑更常见（见 routes.test.ts 头部关于 PR #53 的说明）。
+  const HOST = '127.0.0.1:3080';
+
+  test('跨站 POST /broadcast → 403，且请求体根本没被处理', async () => {
+    const r = await call('/dsh-pet-7340/broadcast?pet=main', 'POST', JSON.stringify({ text: '被跨站投喂' }), {
+      host: HOST,
+      origin: 'http://evil.example',
+    });
+    assert.equal(r.status, 403);
+    const body = JSON.parse(r.body) as { error: string; reason: string };
+    assert.equal(body.reason, 'origin-mismatch');
+    assert.match(body.error, /Host/);
+  });
+
+  test('Sec-Fetch-Site: cross-site（即使不带 Origin）→ 403', async () => {
+    const r = await call('/dsh-pet-7340/config', 'POST', '{}', {
+      host: HOST,
+      'sec-fetch-site': 'cross-site',
+    });
+    assert.equal(r.status, 403);
+    assert.equal((JSON.parse(r.body) as { reason: string }).reason, 'cross-site');
+  });
+
+  test('同源页面照常放行：Origin 与 Host 一致 → 200', async () => {
+    const r = await call('/dsh-pet-7340/state', 'GET', undefined, {
+      host: HOST,
+      origin: 'http://' + HOST,
+      'sec-fetch-site': 'same-origin',
+    });
+    assert.equal(r.status, 200);
+  });
+
+  test('非浏览器调用方（curl / 脚本 / 桌面管道：没有任何来源头）照常放行 → 200', async () => {
+    const r = await call('/dsh-pet-7340/state', 'GET', undefined, {});
+    assert.equal(r.status, 200);
+  });
+
+  test('Origin: null（沙箱 iframe / file://）→ 403', async () => {
+    const r = await call('/dsh-pet-7340/anim?pet=main', 'POST', '{}', { host: HOST, origin: 'null' });
+    assert.equal(r.status, 403);
+    assert.equal((JSON.parse(r.body) as { reason: string }).reason, 'bad-origin');
   });
 });
