@@ -869,4 +869,14 @@ describe('CSRF 防线 —— 浏览器跨站请求在 handler 层被拒绝', () 
     assert.equal(r.status, 403);
     assert.equal((JSON.parse(r.body) as { reason: string }).reason, 'bad-origin');
   });
+
+  test('DNS 重绑定形态（Origin 与 Host 同为外部域名）→ 403 untrusted-host', async () => {
+    const r = await call('/dsh-pet-7340/state', 'GET', undefined, {
+      host: 'evil.example:3080',
+      origin: 'http://evil.example:3080',
+      'sec-fetch-site': 'same-origin',
+    });
+    assert.equal(r.status, 403);
+    assert.equal((JSON.parse(r.body) as { reason: string }).reason, 'untrusted-host');
+  });
 });

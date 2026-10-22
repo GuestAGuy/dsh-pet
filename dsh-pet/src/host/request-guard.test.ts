@@ -39,15 +39,23 @@ describe('放行：不带浏览器来源头的调用方（curl / 脚本 / 桌面
   });
 
   test('反向代理终止 TLS：Origin=https://host、Host 只有 host:port → 放行（只比 authority，不比 scheme）', () => {
-    assert.deepEqual(judgeRequestOrigin({ host: 'dsh.example.com', origin: 'https://dsh.example.com' }), {
-      ok: true,
-    });
+    assert.deepEqual(
+      judgeRequestOrigin(
+        { host: 'dsh.example.com', origin: 'https://dsh.example.com' },
+        { trustedHosts: ['dsh.example.com'] },
+      ),
+      { ok: true },
+    );
   });
 
   test('authority 大小写不敏感（Host 在 HTTP/1.1 里不区分大小写）→ 放行', () => {
-    assert.deepEqual(judgeRequestOrigin({ host: 'DSH.example.com', origin: 'http://dsh.example.com' }), {
-      ok: true,
-    });
+    assert.deepEqual(
+      judgeRequestOrigin(
+        { host: 'DSH.example.com', origin: 'http://dsh.example.com' },
+        { trustedHosts: ['dsh.example.com'] },
+      ),
+      { ok: true },
+    );
   });
 });
 
@@ -110,5 +118,72 @@ describe('拒绝：跨站浏览器请求', () => {
     assert.equal(v.ok, false);
     if (v.ok) return;
     assert.equal(v.reason, 'bad-origin');
+  });
+});
+
+describe('DNS rebinding —— 单机部署的 Host 白名单', () => {
+  // 攻击形态：页面从 evil.example 加载，DNS 重绑定后该域名解析到 127.0.0.1。浏览器仍认为同源，
+  // 于是 Origin 与 Host 一致、Sec-Fetch-Site 也是 same-origin——只有 Host 白名单能拦住。
+  const REBIND = { host: 'evil.example:3080', origin: 'http://evil.example:3080', 'sec-fetch-site': 'same-origin' };
+
+  test('重绑定的 Origin 与 Host 一致（同源）→ 仍然拒绝：untrusted-host', () => {
+    const v = judgeRequestOrigin(REBIND);
+    assert.equal(v.ok, false);
+    if (v.ok) return;
+    assert.equal(v.reason, 'untrusted-host');
+  });
+
+  test('重绑定的同源 GET（根本不带 Origin）→ 同样拒绝（否则 /state、/chat 可被读）', () => {
+    const v = judgeRequestOrigin({ host: 'evil.example:3080', 'sec-fetch-site': 'same-origin' });
+    assert.equal(v.ok, false);
+    if (v.ok) return;
+    assert.equal(v.reason, 'untrusted-host');
+  });
+
+  test('回环名与 IP 字面量照常放行：127.0.0.1 / localhost / [::1] / 局域网 IP', () => {
+    for (const host of [
+      '127.0.0.1:3080',
+      '127.0.0.1',
+      'localhost:3080',
+      'localhost',
+      '[::1]:3080',
+      '192.168.1.5:3080',
+    ]) {
+      assert.deepEqual(judgeRequestOrigin({ host }), { ok: true }, host);
+    }
+  });
+
+  test('回环 Host 的显式端口必须等于服务器端口（policy.port）', () => {
+    const policy = { port: 3080 };
+    assert.deepEqual(judgeRequestOrigin({ host: '127.0.0.1:3080' }, policy), { ok: true });
+    assert.deepEqual(judgeRequestOrigin({ host: 'localhost:3080' }, policy), { ok: true });
+    const v = judgeRequestOrigin({ host: '127.0.0.1:9999' }, policy);
+    assert.equal(v.ok, false);
+    if (v.ok) return;
+    assert.equal(v.reason, 'untrusted-host');
+  });
+
+  test('Host 里出现 userinfo / 路径（伪造形态）→ untrusted-host', () => {
+    for (const host of ['user:pass@127.0.0.1:3080', '127.0.0.1:3080/../x']) {
+      const v = judgeRequestOrigin({ host });
+      assert.equal(v.ok, false, host);
+      if (v.ok) continue;
+      assert.equal(v.reason, 'untrusted-host');
+    }
+  });
+
+  test('用户主动对外暴露（bind 非回环）→ 不查 Host 白名单（Host 枚举不出来）', () => {
+    const v = judgeRequestOrigin(REBIND, { boundHost: '0.0.0.0' });
+    assert.deepEqual(v, { ok: true });
+  });
+
+  test('回环绑定 + 反向代理：显式信任的 authority 放行，未登记的仍然拒绝', () => {
+    const policy = { trustedHosts: ['dsh.example.com', 'pet.internal:8443'] };
+    assert.deepEqual(judgeRequestOrigin({ host: 'dsh.example.com' }, policy), { ok: true });
+    assert.deepEqual(judgeRequestOrigin({ host: 'pet.internal:8443' }, policy), { ok: true });
+    const v = judgeRequestOrigin({ host: 'other.example.com' }, policy);
+    assert.equal(v.ok, false);
+    if (v.ok) return;
+    assert.equal(v.reason, 'untrusted-host');
   });
 });

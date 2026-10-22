@@ -269,6 +269,20 @@ function sendFile(res: ServerResponse, file: string, contentType: string): void 
 /** 该宠物是否参与桌面模式（Electron 透明窗） */
 const isDesktopVisible = (display: unknown): boolean => display === 'desktop' || display === 'both';
 
+/**
+ * 反向代理 / 自定义域名部署的显式信任列表（`DSH_PET_TRUSTED_HOSTS`，逗号分隔 `host` 或 `host:port`）。
+ *
+ * 只影响 **回环绑定** 部署的 Host 白名单（见 ./request-guard 的 ③）：DSH 默认只绑 127.0.0.1，
+ * 本机访问只该用回环名/IP 字面量；若把 DSH 放在反向代理后面、用域名访问，就把那个 authority
+ * 填进来。非回环绑定（`--host 0.0.0.0` 等）本来就不查白名单，不需要设置。
+ */
+function trustedHostsFromEnv(env: NodeJS.ProcessEnv = process.env): string[] {
+  return (env.DSH_PET_TRUSTED_HOSTS ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+}
+
 /** 发送 JSON 响应（headers 可选：如 no-cache 触发计数） */
 function sendJson(res: ServerResponse, status: number, obj: unknown, headers: Record<string, string> = {}): void {
   const body = JSON.stringify(obj);
@@ -2376,7 +2390,13 @@ export function apply(ctx: any): void {
           // CSRF 防线（见 ./request-guard）：浏览器跨站请求在**读 body 之前**拒绝。
           // 恶意页面能用"简单请求"（text/plain + JSON 正文）绕过 CORS 预检，却绕不过来源判定；
           // 不带 Origin / Sec-Fetch-Site 的非浏览器调用方（curl、脚本、桌面管道）行为完全不变。
-          const verdict = judgeRequestOrigin(req.headers);
+          // 策略来自部署事实：回环绑定 = 单机默认，Host 必须回环/字面量（防 DNS rebinding）；
+          // 非回环绑定 = 用户主动对外暴露，退回 Origin 同源判定（Host 枚举不出来）。
+          const verdict = judgeRequestOrigin(req.headers, {
+            boundHost: ctx.webServer?.host,
+            port: ctx.webServer?.port,
+            trustedHosts: trustedHostsFromEnv(),
+          });
           if (!verdict.ok) {
             sendJson(res, 403, { error: verdict.message, reason: verdict.reason });
             return;

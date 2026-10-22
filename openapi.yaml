@@ -20,8 +20,10 @@ info:
       请勿把该端口转发/代理到公网。
     - **来源校验（CSRF 防线）**：带 `Origin` / `Sec-Fetch-Site` 的浏览器请求必须是同源
       （`Origin` 的 authority 与 `Host` 一致，且 `Sec-Fetch-Site` 不为 `cross-site`），否则一律
-      403 `{ error, reason }`。不带这些头的调用方（curl、脚本、桌面管道）不受影响——所以第三方
-      插件请在服务端调用，不要从别的网页直接 `fetch` 本接口。
+      403 `{ error, reason }`。本机部署（DSH 绑回环）还会校验 `Host`：只接受回环地址与 IP 字面量
+      （防 DNS rebinding），用域名或反向代理访问时把该 authority 填进环境变量
+      `DSH_PET_TRUSTED_HOSTS`（逗号分隔）。不带这些头的调用方（curl、脚本、桌面管道）不受影响——
+      所以第三方插件请在服务端调用，不要从别的网页直接 `fetch` 本接口。
     - 桌面半侧不走 HTTP，而是 `dsh-pet-bridge://` 自定义 scheme 经主进程管道转发到**同一个**
       `handlePetRoute`。所以下表所有路径对两端行为完全一致。
 
