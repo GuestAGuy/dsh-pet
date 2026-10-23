@@ -2507,7 +2507,10 @@ export function apply(ctx: any): void {
           // 非回环绑定 = 用户主动对外暴露，退回 Origin 同源判定（Host 枚举不出来）。
           const verdict = judgeRequestOrigin(req.headers, {
             boundHost: ctx.webServer?.host,
-            port: ctx.webServer?.port,
+            // 端口取**本次连接的实际监听口**：独立模式允许把同一份路由挂到另一个端口上
+            // （测试里的 protectedServer 就是），ctx.webServer.port 会指向最初那个监听，
+            // 直接拿来比 Host 会误杀。桩请求没有 socket → 回退 ctx 的端口。
+            port: req.socket?.localPort ?? ctx.webServer?.port,
             trustedHosts: trustedHostsFromEnv(),
           });
           if (!verdict.ok) {

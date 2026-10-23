@@ -122,8 +122,9 @@ function judgeHost(host: string, policy: RequestOriginPolicy): RequestOriginVerd
   const { hostname, port } = parts;
 
   if (isLoopbackName(hostname)) {
-    // 回环 + 显式端口：必须等于服务器实际端口（代理转发到别的端口的 loopback Host 不成立）
-    if (port !== '' && policy.port !== undefined && Number(port) !== policy.port) {
+    // 回环 + 显式端口：必须等于服务器实际端口（代理转发到别的端口的 loopback Host 不成立）。
+    // policy.port 为 0/未知时跳过：独立模式的 `port: 0` 由内核分配，取不到真端口时不该误杀。
+    if (port !== '' && policy.port !== undefined && policy.port > 0 && Number(port) !== policy.port) {
       return {
         ok: false,
         reason: 'untrusted-host',
