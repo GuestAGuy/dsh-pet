@@ -15,7 +15,7 @@
  */
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -24,6 +24,7 @@ import { apply } from '../host/index.ts';
 import { createStandaloneContext, type RegisteredRoute, type StandaloneLogger } from './context.ts';
 import { configPathsFor } from './options.ts';
 import { listenStandaloneServer, type StandaloneServer } from './server.ts';
+import { createRequestSecurity } from './request-security.ts';
 
 /** 静默日志器（插件仍会往 console 打少量 warn，那是它自己的诊断，这里不拦） */
 const silent: StandaloneLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -79,6 +80,55 @@ async function get(path: string): Promise<{ status: number; text: string; json: 
   const text = await response.text();
   return { status: response.status, text, json: () => JSON.parse(text) as unknown };
 }
+
+test('real plugin chat routes cannot bypass the standalone capability using encoded names', async () => {
+  const security = createRequestSecurity();
+  const protectedServer = await listenStandaloneServer({
+    routes: context?.routes ?? [],
+    logger: silent,
+    port: 0,
+    security,
+  });
+  try {
+    const prefix = `http://127.0.0.1:${protectedServer.port}/dsh-pet-7340/`;
+    for (const name of ['chat', '%63hat', 'ch%61t']) {
+      const response = await fetch(prefix + name + '?pet=main');
+      assert.equal(response.status, 403);
+      await response.text();
+    }
+    // With a valid capability the encoded name reaches the real plugin's parameter validation.
+    const response = await fetch(prefix + '%63hat', { headers: { 'X-DSH-Pet-Token': security.token } });
+    assert.equal(response.status, 200);
+    assert.equal(((await response.json()) as { reason: string }).reason, 'pet-required');
+  } finally {
+    await protectedServer.close();
+  }
+});
+
+test('config pet IDs: duplicate IDs return 400 without creating a user file', async (t) => {
+  const file = configPathsFor(packageRoot, home).userFile;
+  assert.equal(existsSync(file), false);
+  t.after(() => rmSync(file, { force: true }));
+  const pet = {
+    id: 'main',
+    name: 'Blue',
+    size: 240,
+    balanceEnabled: false,
+    display: 'web',
+    position: { corner: 'top-right', marginX: 20, marginY: 20 },
+  };
+  for (const id of ['main', ' main ']) {
+    const response = await fetch(`${base}/dsh-pet-7340/config`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pets: [pet, { ...pet, id, name: 'second' }] }),
+    });
+    assert.equal(response.status, 400);
+    const body = (await response.json()) as { error: string };
+    assert.match(body.error, /^invalid pet config:/);
+    assert.equal(existsSync(file), false);
+  }
+});
 
 describe('插件宿主半边在独立模式下跑起来了', () => {
   test('apply 注册了插件自己的路由前缀（独立模式不自己写路由表）', () => {
