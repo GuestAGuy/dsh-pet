@@ -247,6 +247,7 @@ DSH 设置 → 「桌宠配置」：
 | `pets`                 | 宠物列表（大小/位置/多开/余额开关）                                                     | 数组，每项同 `pets[]` 结构 |
 | `animations`           | **动画池**：idle / turn / drag / clicks / moves / categories / events（余额等事件动画） | 同 `animations` 结构       |
 | `animationWeights`     | 动画链播放权重（idle / turn / move）                                                    | 同 `animationWeights` 结构 |
+| `actionCooldownSec`    | 随机链冷却（秒）：每个分类动作播完后原地站多久再掷下一次（0 = 不等待，默认 0）           | 非负数字，可写小数         |
 | `eventsRefreshSec`     | 事件刷新周期（秒）                                                                      | 同 `eventsRefreshSec` 结构 |
 | `notificationsEnabled` | 系统通知总开关（布尔）                                                                  | 同 `notificationsEnabled`  |
 

@@ -300,6 +300,10 @@ class PetSprite {
     this.inputRegionResize.disconnect();
     this.inputRegionElements.clear();
     if (this.bubbleTimer !== null) window.clearTimeout(this.bubbleTimer);
+    if (this.cooldownTimer) {
+      window.clearTimeout(this.cooldownTimer);
+      this.cooldownTimer = null;
+    }
     if (this.whisperTimer !== null) window.clearTimeout(this.whisperTimer);
     if (this.workTimer !== null) window.clearTimeout(this.workTimer);
     if (this.chatClose) {
@@ -665,6 +669,11 @@ class PetSprite {
 
   // 动画链（与浏览器 pickNext 语义一致，纯逻辑在 shared）
   playIdle() {
+    // 新的掷骰意味着上一轮冷却作废（否则旧定时器会在新动画播完后多等一拍）
+    if (this.cooldownTimer) {
+      window.clearTimeout(this.cooldownTimer);
+      this.cooldownTimer = null;
+    }
     // 占用锁（issue #122 第 4 项）：锁生效时**不掷骰**。这里是随机链的**唯一**入口（只有动画播完
     // 才会走到），一句判断就把随机动画、随机转向、自主走位一起停住——宠物停在最后一帧，
     // 等持锁者的下一条指令（那走 /anim，不经这里）。与浏览器 pickNext 同一处判断。
@@ -753,6 +762,19 @@ class PetSprite {
       // 互动动画播完：workStatus 非终态时恢复状态循环，否则回 idle（与浏览器同一语义）
       if (this.resumeWorkStatusAnim()) return;
       if (animations.idle.length) this.playOnce(S.pick(animations.idle, this.anim));
+      return;
+    }
+    // 随机链冷却（actionCooldownSec）：分类动作播完 → 原地站 N 秒再继续（0 = 立即继续，原行为）。
+    // 与浏览器 handleEnded 同一语义；冷却期间被事件/互动/点播换了动画则按 atEnd 守卫让位。
+    const isCategoryAction = animations.categories.some((c) => c.actions.includes(this.anim));
+    const cooldownMs = Math.max(0, Number(this.pet.actionCooldownSec) || 0) * 1000;
+    if (isCategoryAction && cooldownMs > 0) {
+      if (this.cooldownTimer) window.clearTimeout(this.cooldownTimer);
+      const atEnd = this.anim;
+      this.cooldownTimer = setTimeout(() => {
+        this.cooldownTimer = null;
+        if (this.anim === atEnd) this.playIdle();
+      }, cooldownMs);
       return;
     }
     this.playIdle();

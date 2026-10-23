@@ -105,6 +105,7 @@ const GLOBAL_DEFAULT_KEYS = [
   'whisperModel',
   'chatModel',
   'eventsRefreshSec',
+  'actionCooldownSec',
 ] as const;
 
 /** 已告警过的 文件:字段（进程内去重：同一问题只告警一次，避免每请求刷屏；重启重置） */
@@ -412,6 +413,11 @@ function topFieldValid(key: string, value: unknown): boolean {
       return weightsValid(value);
     case 'eventsRefreshSec':
       return eventsRefreshSecValid(value);
+    case 'actionCooldownSec': {
+      // 随机链冷却（秒）：非负有限数字，0 = 不等待
+      const n = Number(value);
+      return Number.isFinite(n) && n >= 0;
+    }
     case 'physics':
       return physicsValid(value);
     case 'font':

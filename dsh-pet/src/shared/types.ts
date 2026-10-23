@@ -120,6 +120,8 @@ export interface Pet {
   whisperPrompt?: string;
   animations?: Animations;
   animationWeights?: Weights;
+  /** 随机链冷却（秒）：分类动作播完后的原地停顿，0/缺省 = 不等待（见 host/config.ts 合并） */
+  actionCooldownSec?: number;
   extra?: boolean;
   assetRoot?: string;
   /** 全局默认：事件刷新周期（秒，事件名 → 间隔；整段替换，缺的键由消费端各自兜底）。

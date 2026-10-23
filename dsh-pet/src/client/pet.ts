@@ -295,6 +295,14 @@ export function makePetUI(rt: {
     // 碎碎念气泡（显隐定时器与余额气泡各自独立：10s 各自计时互不干扰；渲染走单槽优先级）
     const [whisperBubbleOn, setWhisperBubbleOn] = useState(false);
     const whisperBubbleTimerRef = useRef<number | null>(null);
+    // 随机链冷却（actionCooldownSec）：分类动作播完后的原地停顿定时器（0 = 不等待）
+    const cooldownTimerRef = useRef<number | null>(null);
+    const clearCooldown = (): void => {
+      if (cooldownTimerRef.current !== null) {
+        window.clearTimeout(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+    };
     // 碎碎念当前文本（本宠物独立生成的句子）+ 配图名称（开启配图时由 host 随机抽定，随文本一起来）
     const [whisperText, setWhisperText] = useState<string | null>(null);
     const [whisperImage, setWhisperImage] = useState<string | undefined>(undefined);
@@ -626,6 +634,7 @@ export function makePetUI(rt: {
       () => () => {
         if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
         if (whisperBubbleTimerRef.current !== null) window.clearTimeout(whisperBubbleTimerRef.current);
+        clearCooldown();
       },
       [],
     );
@@ -962,6 +971,7 @@ export function makePetUI(rt: {
 
     // ---- 动画链：播完按权重选下一个 ----
     const pickNext = () => {
+      clearCooldown();
       // 占用锁（issue #122 第 4 项）：锁生效时**不掷骰**。这里是随机链的**唯一**入口
       // （只有动画播完才会走到），所以一句判断就把随机动画、随机转向、自主走位一起停住——
       // 宠物停在最后一帧，等持锁者的下一条指令（那走 /anim，不经这里）。
@@ -1142,6 +1152,20 @@ export function makePetUI(rt: {
         if (animations.idle.length) setAnim(pick(animations.idle, animRef.current));
         setOnce(true);
         setSeq((s) => s + 1);
+        return;
+      }
+      // 随机链冷却（actionCooldownSec）：分类动作播完 → 原地站 N 秒再掷下一次（0 = 立即继续）。
+      // 只作用于分类动作：待机/转向/移动是链自身的节奏，事件与互动动画走上面的分支。
+      // 冷却期间若被事件/互动/点播换了动画，定时器按 atEnd 守卫让位（那条链自己会收尾）。
+      const isCategoryAction = animations.categories.some((c) => c.actions.includes(animRef.current));
+      const cooldownMs = Math.max(0, Number(cfg.actionCooldownSec) || 0) * 1000;
+      if (isCategoryAction && cooldownMs > 0) {
+        clearCooldown();
+        const atEnd = animRef.current;
+        cooldownTimerRef.current = window.setTimeout(() => {
+          cooldownTimerRef.current = null;
+          if (animRef.current === atEnd) pickNext();
+        }, cooldownMs);
         return;
       }
       pickNext();

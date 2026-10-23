@@ -32,6 +32,7 @@ export function flattenConfigPets(merged: Record<string, Record<string, unknown>
         ...p,
         animations: conf.animations as Animations | undefined,
         animationWeights: conf.animationWeights as Weights | undefined,
+        actionCooldownSec: conf.actionCooldownSec as number | undefined,
         eventsRefreshSec: conf.eventsRefreshSec as Record<string, number> | undefined,
         physics: conf.physics as PhysicsParams | undefined,
         font: conf.font as FontConfig | undefined,
