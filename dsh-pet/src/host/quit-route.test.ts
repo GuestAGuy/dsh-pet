@@ -7,7 +7,7 @@
  * 不该由一只宠物的托盘决定，所以菜单项在那边不出现。
  *
  * 这里钉住三件事：
- *   ① 能力按**请求时**判定：ctx 上没有 shutdownApp → canQuit:false，且 POST 不触发任何停机；
+ *   ① 能力按请求时判定：ctx 上没有 shutdownApp → canQuit:false，且 POST 不触发任何停机；
  *   ② 有该能力 → canQuit:true，POST 触发且 reason 正确；
  *   ③ 桌面端接线（源码守卫）：BRIDGE 下不得自己退，必须 POST /quit；退出不得调 syncDesktop。
  *
@@ -27,7 +27,7 @@ import { apply } from './index.ts';
 /** 包内文件源码（守卫用；相对 src/host/ 解析） */
 const readSource = (rel: string): string => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
 
-const hostSource = readSource('./index.ts');
+const hostSource = readSource('./index.ts') + '\n' + readSource('./routes/desktop.ts');
 
 type Result = { status: number; body: string };
 
@@ -79,7 +79,7 @@ before(() => {
   let handler: ((req: unknown, res: unknown) => Promise<void>) | undefined;
   const noop = (): void => {};
   hostCtx.shutdownApp = shutdownSpy;
-  // 必须与 hostCtx 是**同一个引用**（不能展开成新对象）：用例之间要 delete 掉 shutdownApp，
+  // 必须与 hostCtx 是同一个引用（不能展开成新对象）：用例之间要 delete 掉 shutdownApp，
   // 验证 /quit 是「请求时判定」而不是 apply 时就把能力固定死。
   Object.assign(hostCtx, {
     effect: (fn: () => unknown) => {
@@ -194,21 +194,22 @@ describe('POST /quit —— 把退出交给宿主停机', () => {
 });
 
 describe('桌面端与独立模式的接线（源码守卫：两半各自构建，无法互相 import）', () => {
-  const main = readSource('../../runtime/electron-helper/main.js');
+  // 托盘已拆到 main/tray.js：退出项与 quitApp 都在那份里
+  const tray = readSource('../../runtime/electron-helper/main/tray.js');
   const cli = readSource('../standalone/cli.ts');
   const context = readSource('../standalone/context.ts');
 
-  test('退出项不再只给独立应用：canQuit = APP_MODE || !BRIDGE || hostCanQuit', () => {
-    assert.match(main, /const canQuit = APP_MODE \|\| !BRIDGE \|\| hostCanQuit/);
-    assert.match(main, /label: '退出', click: quitApp/);
+  test('退出项不再只给独立应用：canQuit = appMode || !isBridge || hostCanQuit', () => {
+    assert.match(tray, /const canQuit = appMode \|\| !isBridge \|\| hostCanQuit/);
+    assert.match(tray, /label: '退出', click: quitApp/);
   });
 
-  test('BRIDGE 下不得自己 app.quit()：点击必须 POST 回宿主', () => {
-    const block = /const quitApp = \(\) => \{([\s\S]*?)\n {4}\};/.exec(main);
-    assert.ok(block, 'main.js 必须有 quitApp');
+  test('bridge 下不得自己 app.quit()：点击必须 POST 回宿主', () => {
+    const block = /const quitApp = \(\) => \{([\s\S]*?)\n {6}\};/.exec(tray);
+    assert.ok(block, 'main/tray.js 必须有 quitApp');
     assert.ok(
-      /hostRequest\('POST', PET_ROUTE \+ '\/quit'\)/.test(block[1]),
-      'BRIDGE 分支必须把退出交给宿主（自己退会被当成崩溃重启）',
+      /hostRequest\('POST', petRoute \+ '\/quit'\)/.test(block[1]),
+      'bridge 分支必须把退出交给宿主（自己退会被当成崩溃重启）',
     );
   });
 
@@ -218,7 +219,7 @@ describe('桌面端与独立模式的接线（源码守卫：两半各自构建�
   });
 
   test('退出不是重启：/quit 路由块内不得调用 syncDesktop()', () => {
-    const block = /if \(rest === 'quit'\) \{([\s\S]*?)\n {4}\}/.exec(hostSource);
+    const block = /if \(rest === 'quit'\) \{([\s\S]*?)\n {2}\}/.exec(hostSource);
     assert.ok(block, '宿主必须有 /quit 路由');
     assert.ok(!/syncDesktop/.test(block[1]), '退出不是重启：reload 守卫要求 syncDesktop 恰好 4 次');
   });

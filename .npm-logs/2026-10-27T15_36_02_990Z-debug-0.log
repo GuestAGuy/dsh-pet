@@ -1,0 +1,515 @@
+0 verbose cli /home/aguy/.nvm/versions/node/v24.14.1/bin/node /home/aguy/.nvm/versions/node/v24.14.1/bin/npm
+1 info using npm@11.11.0
+2 info using node@v24.14.1
+3 silly config load:file:/home/aguy/.nvm/versions/node/v24.14.1/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet/.npmrc
+5 silly config load:file:/home/aguy/.npmrc
+6 silly config load:file:/home/aguy/.nvm/versions/node/v24.14.1/etc/npmrc
+7 verbose title npm install
+8 verbose argv "install" "--no-audit" "--no-fund" "--ignore-scripts" "--cache" "/home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet/../.npm-cache" "--logs-dir" "/home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet/../.npm-logs"
+9 verbose logfile logs-max:10 dir:/home/aguy/Documents/deepseek-harness/default-workspace/fork/.npm-logs/2026-10-27T15_36_02_990Z-
+10 verbose logfile /home/aguy/Documents/deepseek-harness/default-workspace/fork/.npm-logs/2026-10-27T15_36_02_990Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly idealTree buildDeps
+14 silly fetch manifest eslint-plugin-jsdoc@^65.4.2
+15 silly packumentCache full:https://registry.npmjs.org/eslint-plugin-jsdoc cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/npm 187ms
+17 http fetch GET 200 https://registry.npmjs.org/eslint-plugin-jsdoc 211ms (cache miss)
+18 silly packumentCache full:https://registry.npmjs.org/eslint-plugin-jsdoc set size:undefined disposed:false
+19 silly fetch manifest eslint@^10.9.0
+20 silly packumentCache full:https://registry.npmjs.org/eslint cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/eslint 76ms (cache miss)
+22 silly packumentCache full:https://registry.npmjs.org/eslint set size:undefined disposed:false
+23 silly fetch manifest jiti@*
+24 silly packumentCache full:https://registry.npmjs.org/jiti cache-miss
+25 http fetch GET 200 https://registry.npmjs.org/jiti 28ms (cache miss)
+26 silly packumentCache full:https://registry.npmjs.org/jiti set size:undefined disposed:false
+27 silly fetch manifest typescript@^5.5.0
+28 silly packumentCache full:https://registry.npmjs.org/typescript cache-miss
+29 http fetch GET 200 https://registry.npmjs.org/typescript 258ms (cache miss)
+30 silly packumentCache full:https://registry.npmjs.org/typescript set size:undefined disposed:false
+31 silly placeDep ROOT eslint-plugin-jsdoc@65.4.2 OK for: dsh-pet@0.3.8 want: ^65.4.2
+32 silly fetch manifest html-entities@^2.6.0
+33 silly packumentCache full:https://registry.npmjs.org/html-entities cache-miss
+34 silly fetch manifest comment-parser@1.4.9
+35 silly packumentCache full:https://registry.npmjs.org/comment-parser cache-miss
+36 silly fetch manifest @es-joy/escodegen@^4.2.0
+37 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fescodegen cache-miss
+38 silly fetch manifest object-deep-merge@^2.0.1
+39 silly packumentCache full:https://registry.npmjs.org/object-deep-merge cache-miss
+40 silly fetch manifest to-valid-identifier@^1.0.0
+41 silly packumentCache full:https://registry.npmjs.org/to-valid-identifier cache-miss
+42 silly fetch manifest @es-joy/jsdoccomment@~1.0.0
+43 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fjsdoccomment cache-miss
+44 silly fetch manifest are-docs-informative@^0.1.1
+45 silly packumentCache full:https://registry.npmjs.org/are-docs-informative cache-miss
+46 silly fetch manifest escape-string-regexp@^5.0.0
+47 silly packumentCache full:https://registry.npmjs.org/escape-string-regexp cache-miss
+48 silly fetch manifest parse-imports-exports@^0.2.4
+49 silly packumentCache full:https://registry.npmjs.org/parse-imports-exports cache-miss
+50 silly fetch manifest spdx-expression-parse@^5.0.0
+51 silly packumentCache full:https://registry.npmjs.org/spdx-expression-parse cache-miss
+52 silly fetch manifest @es-joy/resolve.exports@1.2.0
+53 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fresolve.exports cache-miss
+54 http fetch GET 200 https://registry.npmjs.org/comment-parser 30ms (cache miss)
+55 silly packumentCache full:https://registry.npmjs.org/comment-parser set size:undefined disposed:false
+56 http fetch GET 200 https://registry.npmjs.org/escape-string-regexp 37ms (cache miss)
+57 silly packumentCache full:https://registry.npmjs.org/escape-string-regexp set size:undefined disposed:false
+58 http fetch GET 200 https://registry.npmjs.org/spdx-expression-parse 43ms (cache miss)
+59 silly packumentCache full:https://registry.npmjs.org/spdx-expression-parse set size:undefined disposed:false
+60 http fetch GET 200 https://registry.npmjs.org/are-docs-informative 45ms (cache miss)
+61 silly packumentCache full:https://registry.npmjs.org/are-docs-informative set size:undefined disposed:false
+62 http fetch GET 200 https://registry.npmjs.org/html-entities 103ms (cache miss)
+63 silly packumentCache full:https://registry.npmjs.org/html-entities set size:undefined disposed:false
+64 http fetch GET 200 https://registry.npmjs.org/to-valid-identifier 106ms (cache miss)
+65 silly packumentCache full:https://registry.npmjs.org/to-valid-identifier set size:undefined disposed:false
+66 http fetch GET 200 https://registry.npmjs.org/object-deep-merge 108ms (cache miss)
+67 silly packumentCache full:https://registry.npmjs.org/object-deep-merge set size:undefined disposed:false
+68 http fetch GET 200 https://registry.npmjs.org/@es-joy%2fjsdoccomment 115ms (cache miss)
+69 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fjsdoccomment set size:undefined disposed:false
+70 http fetch GET 200 https://registry.npmjs.org/parse-imports-exports 131ms (cache miss)
+71 silly packumentCache full:https://registry.npmjs.org/parse-imports-exports set size:undefined disposed:false
+72 http fetch GET 200 https://registry.npmjs.org/@es-joy%2fresolve.exports 235ms (cache miss)
+73 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fresolve.exports set size:undefined disposed:false
+74 http fetch GET 200 https://registry.npmjs.org/@es-joy%2fescodegen 277ms (cache miss)
+75 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fescodegen set size:undefined disposed:false
+76 silly placeDep ROOT @es-joy/escodegen@4.2.0 OK for: eslint-plugin-jsdoc@65.4.2 want: ^4.2.0
+77 silly placeDep ROOT @es-joy/jsdoccomment@1.0.0 OK for: eslint-plugin-jsdoc@65.4.2 want: ~1.0.0
+78 silly placeDep ROOT @es-joy/resolve.exports@1.2.0 OK for: eslint-plugin-jsdoc@65.4.2 want: 1.2.0
+79 silly placeDep ROOT are-docs-informative@0.1.1 OK for: eslint-plugin-jsdoc@65.4.2 want: ^0.1.1
+80 silly placeDep ROOT comment-parser@1.4.9 OK for: eslint-plugin-jsdoc@65.4.2 want: 1.4.9
+81 silly placeDep node_modules/eslint-plugin-jsdoc escape-string-regexp@5.0.0 OK for: eslint-plugin-jsdoc@65.4.2 want: ^5.0.0
+82 silly placeDep ROOT html-entities@2.6.0 OK for: eslint-plugin-jsdoc@65.4.2 want: ^2.6.0
+83 silly placeDep ROOT object-deep-merge@2.0.1 OK for: eslint-plugin-jsdoc@65.4.2 want: ^2.0.1
+84 silly placeDep ROOT parse-imports-exports@0.2.4 OK for: eslint-plugin-jsdoc@65.4.2 want: ^0.2.4
+85 silly placeDep ROOT spdx-expression-parse@5.0.0 OK for: eslint-plugin-jsdoc@65.4.2 want: ^5.0.0
+86 silly placeDep ROOT to-valid-identifier@1.0.0 OK for: eslint-plugin-jsdoc@65.4.2 want: ^1.0.0
+87 silly fetch manifest @es-joy/estraverse@^7.1.1
+88 silly packumentCache full:https://registry.npmjs.org/@es-joy%2festraverse cache-miss
+89 silly fetch manifest @es-joy/jsdoccomment@^0.62.0
+90 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fjsdoccomment cache-miss
+91 silly fetch manifest esprima@^4.0.1
+92 silly packumentCache full:https://registry.npmjs.org/esprima cache-miss
+93 silly fetch manifest source-map@~0.7.6
+94 silly packumentCache full:https://registry.npmjs.org/source-map cache-miss
+95 silly fetch manifest jsdoc-type-pratt-parser@~9.4.0
+96 silly packumentCache full:https://registry.npmjs.org/jsdoc-type-pratt-parser cache-miss
+97 silly fetch manifest parse-statements@1.0.11
+98 silly packumentCache full:https://registry.npmjs.org/parse-statements cache-miss
+99 silly fetch manifest spdx-exceptions@^2.1.0
+100 silly packumentCache full:https://registry.npmjs.org/spdx-exceptions cache-miss
+101 silly fetch manifest spdx-license-ids@^3.0.0
+102 silly packumentCache full:https://registry.npmjs.org/spdx-license-ids cache-miss
+103 silly fetch manifest @sindresorhus/base62@^1.0.0
+104 silly packumentCache full:https://registry.npmjs.org/@sindresorhus%2fbase62 cache-miss
+105 silly fetch manifest reserved-identifiers@^1.0.0
+106 silly packumentCache full:https://registry.npmjs.org/reserved-identifiers cache-miss
+107 http cache https://registry.npmjs.org/@es-joy%2fjsdoccomment 7ms (cache hit)
+108 silly packumentCache full:https://registry.npmjs.org/@es-joy%2fjsdoccomment set size:643090 disposed:false
+109 http fetch GET 200 https://registry.npmjs.org/esprima 25ms (cache miss)
+110 silly packumentCache full:https://registry.npmjs.org/esprima set size:undefined disposed:false
+111 http fetch GET 200 https://registry.npmjs.org/spdx-license-ids 30ms (cache miss)
+112 silly packumentCache full:https://registry.npmjs.org/spdx-license-ids set size:undefined disposed:false
+113 http fetch GET 200 https://registry.npmjs.org/source-map 30ms (cache miss)
+114 silly packumentCache full:https://registry.npmjs.org/source-map set size:undefined disposed:false
+115 http fetch GET 200 https://registry.npmjs.org/jsdoc-type-pratt-parser 33ms (cache miss)
+116 silly packumentCache full:https://registry.npmjs.org/jsdoc-type-pratt-parser set size:undefined disposed:false
+117 http fetch GET 200 https://registry.npmjs.org/parse-statements 87ms (cache miss)
+118 silly packumentCache full:https://registry.npmjs.org/parse-statements set size:undefined disposed:false
+119 http fetch GET 200 https://registry.npmjs.org/spdx-exceptions 104ms (cache miss)
+120 silly packumentCache full:https://registry.npmjs.org/spdx-exceptions set size:undefined disposed:false
+121 http fetch GET 200 https://registry.npmjs.org/reserved-identifiers 104ms (cache miss)
+122 silly packumentCache full:https://registry.npmjs.org/reserved-identifiers set size:undefined disposed:false
+123 http fetch GET 200 https://registry.npmjs.org/@es-joy%2festraverse 236ms (cache miss)
+124 silly packumentCache full:https://registry.npmjs.org/@es-joy%2festraverse set size:undefined disposed:false
+125 http fetch GET 200 https://registry.npmjs.org/@sindresorhus%2fbase62 239ms (cache miss)
+126 silly packumentCache full:https://registry.npmjs.org/@sindresorhus%2fbase62 set size:undefined disposed:false
+127 silly placeDep ROOT @es-joy/estraverse@7.1.1 OK for: @es-joy/escodegen@4.2.0 want: ^7.1.1
+128 silly placeDep node_modules/@es-joy/escodegen @es-joy/jsdoccomment@0.62.0 OK for: @es-joy/escodegen@4.2.0 want: ^0.62.0
+129 silly placeDep ROOT esprima@4.0.1 OK for: @es-joy/escodegen@4.2.0 want: ^4.0.1
+130 silly placeDep node_modules/@es-joy/escodegen source-map@0.7.6 OK for: @es-joy/escodegen@4.2.0 want: ~0.7.6
+131 silly fetch manifest comment-parser@1.4.1
+132 silly packumentCache full:https://registry.npmjs.org/comment-parser cache-miss
+133 silly fetch manifest jsdoc-type-pratt-parser@~5.9.0
+134 silly packumentCache full:https://registry.npmjs.org/jsdoc-type-pratt-parser cache-miss
+135 http cache https://registry.npmjs.org/comment-parser 2ms (cache hit)
+136 silly packumentCache full:https://registry.npmjs.org/comment-parser set size:207575 disposed:false
+137 http cache https://registry.npmjs.org/jsdoc-type-pratt-parser 3ms (cache hit)
+138 silly packumentCache full:https://registry.npmjs.org/jsdoc-type-pratt-parser set size:458853 disposed:false
+139 silly placeDep ROOT jsdoc-type-pratt-parser@9.4.0 OK for: @es-joy/jsdoccomment@1.0.0 want: ~9.4.0
+140 silly fetch manifest node-addon-require-builtin-darwin-arm64@0.1.9
+141 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-darwin-arm64 cache-miss
+142 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-darwin-arm64 13ms (cache miss)
+143 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-darwin-arm64 set size:undefined disposed:false
+144 silly fetch manifest node-addon-require-builtin-darwin-x64@0.1.9
+145 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-darwin-x64 cache-miss
+146 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-darwin-x64 14ms (cache miss)
+147 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-darwin-x64 set size:undefined disposed:false
+148 silly fetch manifest node-addon-require-builtin-linux-arm64-gnu@0.1.9
+149 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-linux-arm64-gnu cache-miss
+150 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-linux-arm64-gnu 14ms (cache miss)
+151 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-linux-arm64-gnu set size:undefined disposed:false
+152 silly fetch manifest node-addon-require-builtin-linux-arm64-musl@0.1.9
+153 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-linux-arm64-musl cache-miss
+154 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-linux-arm64-musl 15ms (cache miss)
+155 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-linux-arm64-musl set size:undefined disposed:false
+156 silly fetch manifest node-addon-require-builtin-linux-x64-musl@0.1.9
+157 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-linux-x64-musl cache-miss
+158 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-linux-x64-musl 14ms (cache miss)
+159 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-linux-x64-musl set size:undefined disposed:false
+160 silly fetch manifest node-addon-require-builtin-win32-arm64-msvc@0.1.9
+161 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-win32-arm64-msvc cache-miss
+162 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-win32-arm64-msvc 14ms (cache miss)
+163 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-win32-arm64-msvc set size:undefined disposed:false
+164 silly fetch manifest node-addon-require-builtin-win32-ia32-msvc@0.1.9
+165 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-win32-ia32-msvc cache-miss
+166 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-win32-ia32-msvc 20ms (cache miss)
+167 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-win32-ia32-msvc set size:undefined disposed:false
+168 silly fetch manifest node-addon-require-builtin-win32-x64-msvc@0.1.9
+169 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-win32-x64-msvc cache-miss
+170 http fetch GET 200 https://registry.npmjs.org/node-addon-require-builtin-win32-x64-msvc 16ms (cache miss)
+171 silly packumentCache full:https://registry.npmjs.org/node-addon-require-builtin-win32-x64-msvc set size:undefined disposed:false
+172 silly placeDep ROOT node-addon-require-builtin-darwin-arm64@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+173 silly placeDep ROOT node-addon-require-builtin-darwin-x64@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+174 silly placeDep ROOT node-addon-require-builtin-linux-arm64-gnu@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+175 silly placeDep ROOT node-addon-require-builtin-linux-arm64-musl@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+176 silly placeDep ROOT node-addon-require-builtin-linux-x64-musl@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+177 silly placeDep ROOT node-addon-require-builtin-win32-arm64-msvc@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+178 silly placeDep ROOT node-addon-require-builtin-win32-ia32-msvc@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+179 silly placeDep ROOT node-addon-require-builtin-win32-x64-msvc@0.1.9 OK for: node-addon-require-builtin@0.1.9 want: 0.1.9
+180 silly fetch manifest @oxc-parser/binding-darwin-arm64@0.64.0
+181 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-darwin-arm64 cache-miss
+182 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-darwin-arm64 31ms (cache miss)
+183 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-darwin-arm64 set size:undefined disposed:false
+184 silly fetch manifest @oxc-parser/binding-darwin-x64@0.64.0
+185 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-darwin-x64 cache-miss
+186 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-darwin-x64 38ms (cache miss)
+187 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-darwin-x64 set size:undefined disposed:false
+188 silly fetch manifest @oxc-parser/binding-linux-arm-gnueabihf@0.64.0
+189 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm-gnueabihf cache-miss
+190 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm-gnueabihf 27ms (cache miss)
+191 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm-gnueabihf set size:undefined disposed:false
+192 silly fetch manifest @oxc-parser/binding-linux-arm64-gnu@0.64.0
+193 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm64-gnu cache-miss
+194 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm64-gnu 30ms (cache miss)
+195 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm64-gnu set size:undefined disposed:false
+196 silly fetch manifest @oxc-parser/binding-linux-arm64-musl@0.64.0
+197 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm64-musl cache-miss
+198 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm64-musl 32ms (cache miss)
+199 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-arm64-musl set size:undefined disposed:false
+200 silly fetch manifest @oxc-parser/binding-linux-x64-musl@0.64.0
+201 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-x64-musl cache-miss
+202 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-linux-x64-musl 29ms (cache miss)
+203 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-linux-x64-musl set size:undefined disposed:false
+204 silly fetch manifest @oxc-parser/binding-wasm32-wasi@0.64.0
+205 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-wasm32-wasi cache-miss
+206 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-wasm32-wasi 26ms (cache miss)
+207 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-wasm32-wasi set size:undefined disposed:false
+208 silly fetch manifest @oxc-parser/binding-win32-arm64-msvc@0.64.0
+209 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-win32-arm64-msvc cache-miss
+210 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-win32-arm64-msvc 109ms (cache miss)
+211 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-win32-arm64-msvc set size:undefined disposed:false
+212 silly fetch manifest @oxc-parser/binding-win32-x64-msvc@0.64.0
+213 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-win32-x64-msvc cache-miss
+214 http fetch GET 200 https://registry.npmjs.org/@oxc-parser%2fbinding-win32-x64-msvc 33ms (cache miss)
+215 silly packumentCache full:https://registry.npmjs.org/@oxc-parser%2fbinding-win32-x64-msvc set size:undefined disposed:false
+216 silly placeDep ROOT @oxc-parser/binding-darwin-arm64@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+217 silly placeDep ROOT @oxc-parser/binding-darwin-x64@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+218 silly placeDep ROOT @oxc-parser/binding-linux-arm-gnueabihf@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+219 silly placeDep ROOT @oxc-parser/binding-linux-arm64-gnu@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+220 silly placeDep ROOT @oxc-parser/binding-linux-arm64-musl@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+221 silly placeDep ROOT @oxc-parser/binding-linux-x64-musl@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+222 silly placeDep ROOT @oxc-parser/binding-wasm32-wasi@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+223 silly placeDep ROOT @oxc-parser/binding-win32-arm64-msvc@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+224 silly placeDep ROOT @oxc-parser/binding-win32-x64-msvc@0.64.0 OK for: oxc-parser@0.64.0 want: 0.64.0
+225 silly fetch manifest @oxc-resolver/binding-darwin-arm64@9.0.2
+226 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-darwin-arm64 cache-miss
+227 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-darwin-arm64 202ms (cache miss)
+228 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-darwin-arm64 set size:undefined disposed:false
+229 silly fetch manifest @oxc-resolver/binding-darwin-x64@9.0.2
+230 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-darwin-x64 cache-miss
+231 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-darwin-x64 223ms (cache miss)
+232 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-darwin-x64 set size:undefined disposed:false
+233 silly fetch manifest @oxc-resolver/binding-freebsd-x64@9.0.2
+234 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-freebsd-x64 cache-miss
+235 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-freebsd-x64 175ms (cache miss)
+236 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-freebsd-x64 set size:undefined disposed:false
+237 silly fetch manifest @oxc-resolver/binding-linux-arm-gnueabihf@9.0.2
+238 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm-gnueabihf cache-miss
+239 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm-gnueabihf 170ms (cache miss)
+240 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm-gnueabihf set size:undefined disposed:false
+241 silly fetch manifest @oxc-resolver/binding-linux-arm64-gnu@9.0.2
+242 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm64-gnu cache-miss
+243 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm64-gnu 181ms (cache miss)
+244 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm64-gnu set size:undefined disposed:false
+245 silly fetch manifest @oxc-resolver/binding-linux-arm64-musl@9.0.2
+246 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm64-musl cache-miss
+247 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm64-musl 171ms (cache miss)
+248 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-arm64-musl set size:undefined disposed:false
+249 silly fetch manifest @oxc-resolver/binding-linux-riscv64-gnu@9.0.2
+250 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-riscv64-gnu cache-miss
+251 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-riscv64-gnu 140ms (cache miss)
+252 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-riscv64-gnu set size:undefined disposed:false
+253 silly fetch manifest @oxc-resolver/binding-linux-s390x-gnu@9.0.2
+254 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-s390x-gnu cache-miss
+255 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-s390x-gnu 167ms (cache miss)
+256 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-s390x-gnu set size:undefined disposed:false
+257 silly fetch manifest @oxc-resolver/binding-linux-x64-musl@9.0.2
+258 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-x64-musl cache-miss
+259 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-x64-musl 179ms (cache miss)
+260 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-linux-x64-musl set size:undefined disposed:false
+261 silly fetch manifest @oxc-resolver/binding-wasm32-wasi@9.0.2
+262 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-wasm32-wasi cache-miss
+263 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-wasm32-wasi 259ms (cache miss)
+264 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-wasm32-wasi set size:undefined disposed:false
+265 silly fetch manifest @oxc-resolver/binding-win32-arm64-msvc@9.0.2
+266 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-win32-arm64-msvc cache-miss
+267 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-win32-arm64-msvc 198ms (cache miss)
+268 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-win32-arm64-msvc set size:undefined disposed:false
+269 silly fetch manifest @oxc-resolver/binding-win32-x64-msvc@9.0.2
+270 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-win32-x64-msvc cache-miss
+271 http fetch GET 200 https://registry.npmjs.org/@oxc-resolver%2fbinding-win32-x64-msvc 31ms (cache miss)
+272 silly packumentCache full:https://registry.npmjs.org/@oxc-resolver%2fbinding-win32-x64-msvc set size:undefined disposed:false
+273 silly placeDep ROOT @oxc-resolver/binding-darwin-arm64@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+274 silly placeDep ROOT @oxc-resolver/binding-darwin-x64@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+275 silly placeDep ROOT @oxc-resolver/binding-freebsd-x64@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+276 silly placeDep ROOT @oxc-resolver/binding-linux-arm-gnueabihf@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+277 silly placeDep ROOT @oxc-resolver/binding-linux-arm64-gnu@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+278 silly placeDep ROOT @oxc-resolver/binding-linux-arm64-musl@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+279 silly placeDep ROOT @oxc-resolver/binding-linux-riscv64-gnu@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+280 silly placeDep ROOT @oxc-resolver/binding-linux-s390x-gnu@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+281 silly placeDep ROOT @oxc-resolver/binding-linux-x64-musl@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+282 silly placeDep ROOT @oxc-resolver/binding-wasm32-wasi@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+283 silly placeDep ROOT @oxc-resolver/binding-win32-arm64-msvc@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+284 silly placeDep ROOT @oxc-resolver/binding-win32-x64-msvc@9.0.2 OK for: oxc-resolver@9.0.2 want: 9.0.2
+285 silly fetch manifest @oxc-transform/binding-darwin-arm64@0.64.0
+286 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-darwin-arm64 cache-miss
+287 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-darwin-arm64 28ms (cache miss)
+288 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-darwin-arm64 set size:undefined disposed:false
+289 silly fetch manifest @oxc-transform/binding-darwin-x64@0.64.0
+290 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-darwin-x64 cache-miss
+291 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-darwin-x64 34ms (cache miss)
+292 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-darwin-x64 set size:undefined disposed:false
+293 silly fetch manifest @oxc-transform/binding-linux-arm-gnueabihf@0.64.0
+294 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm-gnueabihf cache-miss
+295 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm-gnueabihf 111ms (cache miss)
+296 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm-gnueabihf set size:undefined disposed:false
+297 silly fetch manifest @oxc-transform/binding-linux-arm64-gnu@0.64.0
+298 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm64-gnu cache-miss
+299 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm64-gnu 34ms (cache miss)
+300 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm64-gnu set size:undefined disposed:false
+301 silly fetch manifest @oxc-transform/binding-linux-arm64-musl@0.64.0
+302 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm64-musl cache-miss
+303 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm64-musl 50ms (cache miss)
+304 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-arm64-musl set size:undefined disposed:false
+305 silly fetch manifest @oxc-transform/binding-linux-x64-musl@0.64.0
+306 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-x64-musl cache-miss
+307 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-linux-x64-musl 34ms (cache miss)
+308 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-linux-x64-musl set size:undefined disposed:false
+309 silly fetch manifest @oxc-transform/binding-wasm32-wasi@0.64.0
+310 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-wasm32-wasi cache-miss
+311 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-wasm32-wasi 24ms (cache miss)
+312 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-wasm32-wasi set size:undefined disposed:false
+313 silly fetch manifest @oxc-transform/binding-win32-arm64-msvc@0.64.0
+314 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-win32-arm64-msvc cache-miss
+315 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-win32-arm64-msvc 78ms (cache miss)
+316 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-win32-arm64-msvc set size:undefined disposed:false
+317 silly fetch manifest @oxc-transform/binding-win32-x64-msvc@0.64.0
+318 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-win32-x64-msvc cache-miss
+319 http fetch GET 200 https://registry.npmjs.org/@oxc-transform%2fbinding-win32-x64-msvc 30ms (cache miss)
+320 silly packumentCache full:https://registry.npmjs.org/@oxc-transform%2fbinding-win32-x64-msvc set size:undefined disposed:false
+321 silly placeDep ROOT @oxc-transform/binding-darwin-arm64@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+322 silly placeDep ROOT @oxc-transform/binding-darwin-x64@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+323 silly placeDep ROOT @oxc-transform/binding-linux-arm-gnueabihf@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+324 silly placeDep ROOT @oxc-transform/binding-linux-arm64-gnu@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+325 silly placeDep ROOT @oxc-transform/binding-linux-arm64-musl@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+326 silly placeDep ROOT @oxc-transform/binding-linux-x64-musl@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+327 silly placeDep ROOT @oxc-transform/binding-wasm32-wasi@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+328 silly placeDep ROOT @oxc-transform/binding-win32-arm64-msvc@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+329 silly placeDep ROOT @oxc-transform/binding-win32-x64-msvc@0.64.0 OK for: oxc-transform@0.64.0 want: 0.64.0
+330 silly placeDep ROOT parse-statements@1.0.11 OK for: parse-imports-exports@0.2.4 want: 1.0.11
+331 silly fetch manifest @rolldown/binding-darwin-arm64@1.0.0-beta.7
+332 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-darwin-arm64 cache-miss
+333 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-darwin-arm64 58ms (cache miss)
+334 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-darwin-arm64 set size:undefined disposed:false
+335 silly fetch manifest @rolldown/binding-darwin-x64@1.0.0-beta.7
+336 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-darwin-x64 cache-miss
+337 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-darwin-x64 45ms (cache miss)
+338 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-darwin-x64 set size:undefined disposed:false
+339 silly fetch manifest @rolldown/binding-freebsd-x64@1.0.0-beta.7
+340 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-freebsd-x64 cache-miss
+341 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-freebsd-x64 49ms (cache miss)
+342 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-freebsd-x64 set size:undefined disposed:false
+343 silly fetch manifest @rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.7
+344 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-arm-gnueabihf cache-miss
+345 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-linux-arm-gnueabihf 85ms (cache miss)
+346 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-arm-gnueabihf set size:undefined disposed:false
+347 silly fetch manifest @rolldown/binding-linux-arm64-gnu@1.0.0-beta.7
+348 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-arm64-gnu cache-miss
+349 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-linux-arm64-gnu 75ms (cache miss)
+350 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-arm64-gnu set size:undefined disposed:false
+351 silly fetch manifest @rolldown/binding-linux-arm64-musl@1.0.0-beta.7
+352 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-arm64-musl cache-miss
+353 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-linux-arm64-musl 58ms (cache miss)
+354 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-arm64-musl set size:undefined disposed:false
+355 silly fetch manifest @rolldown/binding-linux-x64-musl@1.0.0-beta.7
+356 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-x64-musl cache-miss
+357 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-linux-x64-musl 53ms (cache miss)
+358 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-linux-x64-musl set size:undefined disposed:false
+359 silly fetch manifest @rolldown/binding-wasm32-wasi@1.0.0-beta.7
+360 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-wasm32-wasi cache-miss
+361 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-wasm32-wasi 59ms (cache miss)
+362 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-wasm32-wasi set size:undefined disposed:false
+363 silly fetch manifest @rolldown/binding-win32-arm64-msvc@1.0.0-beta.7
+364 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-win32-arm64-msvc cache-miss
+365 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-win32-arm64-msvc 52ms (cache miss)
+366 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-win32-arm64-msvc set size:undefined disposed:false
+367 silly fetch manifest @rolldown/binding-win32-ia32-msvc@1.0.0-beta.7
+368 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-win32-ia32-msvc cache-miss
+369 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-win32-ia32-msvc 265ms (cache miss)
+370 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-win32-ia32-msvc set size:undefined disposed:false
+371 silly fetch manifest @rolldown/binding-win32-x64-msvc@1.0.0-beta.7
+372 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-win32-x64-msvc cache-miss
+373 http fetch GET 200 https://registry.npmjs.org/@rolldown%2fbinding-win32-x64-msvc 60ms (cache miss)
+374 silly packumentCache full:https://registry.npmjs.org/@rolldown%2fbinding-win32-x64-msvc set size:undefined disposed:false
+375 silly placeDep ROOT @rolldown/binding-darwin-arm64@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+376 silly placeDep ROOT @rolldown/binding-darwin-x64@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+377 silly placeDep ROOT @rolldown/binding-freebsd-x64@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+378 silly placeDep ROOT @rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+379 silly placeDep ROOT @rolldown/binding-linux-arm64-gnu@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+380 silly placeDep ROOT @rolldown/binding-linux-arm64-musl@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+381 silly placeDep ROOT @rolldown/binding-linux-x64-musl@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+382 silly placeDep ROOT @rolldown/binding-wasm32-wasi@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+383 silly placeDep ROOT @rolldown/binding-win32-arm64-msvc@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+384 silly placeDep ROOT @rolldown/binding-win32-ia32-msvc@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+385 silly placeDep ROOT @rolldown/binding-win32-x64-msvc@1.0.0-beta.7 OK for: rolldown@1.0.0-beta.7 want: 1.0.0-beta.7
+386 silly placeDep ROOT spdx-exceptions@2.5.0 OK for: spdx-expression-parse@5.0.0 want: ^2.1.0
+387 silly placeDep ROOT spdx-license-ids@3.0.24 OK for: spdx-expression-parse@5.0.0 want: ^3.0.0
+388 silly placeDep ROOT @sindresorhus/base62@1.0.0 OK for: to-valid-identifier@1.0.0 want: ^1.0.0
+389 silly placeDep ROOT reserved-identifiers@1.2.0 OK for: to-valid-identifier@1.0.0 want: ^1.0.0
+390 silly placeDep node_modules/@es-joy/escodegen comment-parser@1.4.1 OK for: @es-joy/jsdoccomment@0.62.0 want: 1.4.1
+391 silly placeDep node_modules/@es-joy/escodegen jsdoc-type-pratt-parser@5.9.2 OK for: @es-joy/jsdoccomment@0.62.0 want: ~5.9.0
+392 warn EBADENGINE Unsupported engine {
+392 warn EBADENGINE   package: 'eslint-plugin-jsdoc@65.4.2',
+392 warn EBADENGINE   required: { node: '^22.22.2 || >=24.15.0' },
+392 warn EBADENGINE   current: { node: 'v24.14.1', npm: '11.11.0' }
+392 warn EBADENGINE }
+393 warn EBADENGINE Unsupported engine {
+393 warn EBADENGINE   package: '@es-joy/jsdoccomment@1.0.0',
+393 warn EBADENGINE   required: { node: '^22.22.2 || >=24.15.0' },
+393 warn EBADENGINE   current: { node: 'v24.14.1', npm: '11.11.0' }
+393 warn EBADENGINE }
+394 warn EBADENGINE Unsupported engine {
+394 warn EBADENGINE   package: 'jsdoc-type-pratt-parser@9.4.0',
+394 warn EBADENGINE   required: { node: '^22.22.2 || >=24.15.0' },
+394 warn EBADENGINE   current: { node: 'v24.14.1', npm: '11.11.0' }
+394 warn EBADENGINE }
+395 silly reify moves {}
+396 http cache reserved-identifiers@https://registry.npmjs.org/reserved-identifiers/-/reserved-identifiers-1.2.0.tgz 0ms (cache hit)
+397 http cache @sindresorhus/base62@https://registry.npmjs.org/@sindresorhus/base62/-/base62-1.0.0.tgz 0ms (cache hit)
+398 http cache spdx-license-ids@https://registry.npmjs.org/spdx-license-ids/-/spdx-license-ids-3.0.24.tgz 0ms (cache hit)
+399 http cache esprima@https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz 0ms (cache hit)
+400 http cache spdx-exceptions@https://registry.npmjs.org/spdx-exceptions/-/spdx-exceptions-2.5.0.tgz 0ms (cache hit)
+401 http cache jsdoc-type-pratt-parser@https://registry.npmjs.org/jsdoc-type-pratt-parser/-/jsdoc-type-pratt-parser-9.4.0.tgz 0ms (cache hit)
+402 http cache @es-joy/estraverse@https://registry.npmjs.org/@es-joy/estraverse/-/estraverse-7.1.1.tgz 0ms (cache hit)
+403 http cache parse-statements@https://registry.npmjs.org/parse-statements/-/parse-statements-1.0.11.tgz 0ms (cache hit)
+404 http cache spdx-expression-parse@https://registry.npmjs.org/spdx-expression-parse/-/spdx-expression-parse-5.0.0.tgz 0ms (cache hit)
+405 http cache parse-imports-exports@https://registry.npmjs.org/parse-imports-exports/-/parse-imports-exports-0.2.4.tgz 0ms (cache hit)
+406 http cache html-entities@https://registry.npmjs.org/html-entities/-/html-entities-2.6.0.tgz 0ms (cache hit)
+407 http cache object-deep-merge@https://registry.npmjs.org/object-deep-merge/-/object-deep-merge-2.0.1.tgz 0ms (cache hit)
+408 http cache comment-parser@https://registry.npmjs.org/comment-parser/-/comment-parser-1.4.9.tgz 0ms (cache hit)
+409 http cache to-valid-identifier@https://registry.npmjs.org/to-valid-identifier/-/to-valid-identifier-1.0.0.tgz 0ms (cache hit)
+410 http cache are-docs-informative@https://registry.npmjs.org/are-docs-informative/-/are-docs-informative-0.1.1.tgz 0ms (cache hit)
+411 http cache @es-joy/resolve.exports@https://registry.npmjs.org/@es-joy/resolve.exports/-/resolve.exports-1.2.0.tgz 0ms (cache hit)
+412 http cache @es-joy/jsdoccomment@https://registry.npmjs.org/@es-joy/jsdoccomment/-/jsdoccomment-1.0.0.tgz 0ms (cache hit)
+413 http cache @es-joy/escodegen@https://registry.npmjs.org/@es-joy/escodegen/-/escodegen-4.2.0.tgz 0ms (cache hit)
+414 http cache eslint-plugin-jsdoc@https://registry.npmjs.org/eslint-plugin-jsdoc/-/eslint-plugin-jsdoc-65.4.2.tgz 0ms (cache hit)
+415 http cache source-map@https://registry.npmjs.org/source-map/-/source-map-0.7.6.tgz 0ms (cache hit)
+416 http cache jsdoc-type-pratt-parser@https://registry.npmjs.org/jsdoc-type-pratt-parser/-/jsdoc-type-pratt-parser-5.9.2.tgz 0ms (cache hit)
+417 http cache comment-parser@https://registry.npmjs.org/comment-parser/-/comment-parser-1.4.1.tgz 0ms (cache hit)
+418 http cache @es-joy/jsdoccomment@https://registry.npmjs.org/@es-joy/jsdoccomment/-/jsdoccomment-0.62.0.tgz 0ms (cache hit)
+419 http cache escape-string-regexp@https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-5.0.0.tgz 0ms (cache hit)
+420 silly tarball no local data for reserved-identifiers@https://registry.npmjs.org/reserved-identifiers/-/reserved-identifiers-1.2.0.tgz. Extracting by manifest.
+421 silly tarball no local data for @sindresorhus/base62@https://registry.npmjs.org/@sindresorhus/base62/-/base62-1.0.0.tgz. Extracting by manifest.
+422 silly tarball no local data for spdx-license-ids@https://registry.npmjs.org/spdx-license-ids/-/spdx-license-ids-3.0.24.tgz. Extracting by manifest.
+423 silly tarball no local data for esprima@https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz. Extracting by manifest.
+424 silly tarball no local data for spdx-exceptions@https://registry.npmjs.org/spdx-exceptions/-/spdx-exceptions-2.5.0.tgz. Extracting by manifest.
+425 silly tarball no local data for jsdoc-type-pratt-parser@https://registry.npmjs.org/jsdoc-type-pratt-parser/-/jsdoc-type-pratt-parser-9.4.0.tgz. Extracting by manifest.
+426 silly tarball no local data for @es-joy/estraverse@https://registry.npmjs.org/@es-joy/estraverse/-/estraverse-7.1.1.tgz. Extracting by manifest.
+427 silly tarball no local data for parse-statements@https://registry.npmjs.org/parse-statements/-/parse-statements-1.0.11.tgz. Extracting by manifest.
+428 silly tarball no local data for spdx-expression-parse@https://registry.npmjs.org/spdx-expression-parse/-/spdx-expression-parse-5.0.0.tgz. Extracting by manifest.
+429 silly tarball no local data for parse-imports-exports@https://registry.npmjs.org/parse-imports-exports/-/parse-imports-exports-0.2.4.tgz. Extracting by manifest.
+430 silly tarball no local data for html-entities@https://registry.npmjs.org/html-entities/-/html-entities-2.6.0.tgz. Extracting by manifest.
+431 silly tarball no local data for object-deep-merge@https://registry.npmjs.org/object-deep-merge/-/object-deep-merge-2.0.1.tgz. Extracting by manifest.
+432 silly tarball no local data for comment-parser@https://registry.npmjs.org/comment-parser/-/comment-parser-1.4.9.tgz. Extracting by manifest.
+433 silly tarball no local data for to-valid-identifier@https://registry.npmjs.org/to-valid-identifier/-/to-valid-identifier-1.0.0.tgz. Extracting by manifest.
+434 silly tarball no local data for are-docs-informative@https://registry.npmjs.org/are-docs-informative/-/are-docs-informative-0.1.1.tgz. Extracting by manifest.
+435 silly tarball no local data for @es-joy/resolve.exports@https://registry.npmjs.org/@es-joy/resolve.exports/-/resolve.exports-1.2.0.tgz. Extracting by manifest.
+436 silly tarball no local data for @es-joy/jsdoccomment@https://registry.npmjs.org/@es-joy/jsdoccomment/-/jsdoccomment-1.0.0.tgz. Extracting by manifest.
+437 silly tarball no local data for @es-joy/escodegen@https://registry.npmjs.org/@es-joy/escodegen/-/escodegen-4.2.0.tgz. Extracting by manifest.
+438 silly tarball no local data for eslint-plugin-jsdoc@https://registry.npmjs.org/eslint-plugin-jsdoc/-/eslint-plugin-jsdoc-65.4.2.tgz. Extracting by manifest.
+439 silly tarball no local data for source-map@https://registry.npmjs.org/source-map/-/source-map-0.7.6.tgz. Extracting by manifest.
+440 silly tarball no local data for jsdoc-type-pratt-parser@https://registry.npmjs.org/jsdoc-type-pratt-parser/-/jsdoc-type-pratt-parser-5.9.2.tgz. Extracting by manifest.
+441 silly tarball no local data for comment-parser@https://registry.npmjs.org/comment-parser/-/comment-parser-1.4.1.tgz. Extracting by manifest.
+442 silly tarball no local data for @es-joy/jsdoccomment@https://registry.npmjs.org/@es-joy/jsdoccomment/-/jsdoccomment-0.62.0.tgz. Extracting by manifest.
+443 silly tarball no local data for escape-string-regexp@https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-5.0.0.tgz. Extracting by manifest.
+444 http fetch GET 200 https://registry.npmjs.org/reserved-identifiers/-/reserved-identifiers-1.2.0.tgz 29ms (cache miss)
+445 http fetch GET 200 https://registry.npmjs.org/parse-statements/-/parse-statements-1.0.11.tgz 29ms (cache miss)
+446 http fetch GET 200 https://registry.npmjs.org/spdx-license-ids/-/spdx-license-ids-3.0.24.tgz 30ms (cache miss)
+447 http fetch GET 200 https://registry.npmjs.org/jsdoc-type-pratt-parser/-/jsdoc-type-pratt-parser-9.4.0.tgz 29ms (cache miss)
+448 http fetch GET 200 https://registry.npmjs.org/spdx-exceptions/-/spdx-exceptions-2.5.0.tgz 29ms (cache miss)
+449 http fetch GET 200 https://registry.npmjs.org/spdx-expression-parse/-/spdx-expression-parse-5.0.0.tgz 44ms (cache miss)
+450 http fetch GET 200 https://registry.npmjs.org/@sindresorhus/base62/-/base62-1.0.0.tgz 45ms (cache miss)
+451 http fetch GET 200 https://registry.npmjs.org/esprima/-/esprima-4.0.1.tgz 49ms (cache miss)
+452 http fetch GET 200 https://registry.npmjs.org/@es-joy/resolve.exports/-/resolve.exports-1.2.0.tgz 46ms (cache miss)
+453 http fetch GET 200 https://registry.npmjs.org/parse-imports-exports/-/parse-imports-exports-0.2.4.tgz 49ms (cache miss)
+454 http fetch GET 200 https://registry.npmjs.org/html-entities/-/html-entities-2.6.0.tgz 51ms (cache miss)
+455 http fetch GET 200 https://registry.npmjs.org/source-map/-/source-map-0.7.6.tgz 61ms (cache miss)
+456 http fetch GET 200 https://registry.npmjs.org/object-deep-merge/-/object-deep-merge-2.0.1.tgz 75ms (cache miss)
+457 http fetch GET 200 https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-5.0.0.tgz 73ms (cache miss)
+458 http fetch GET 200 https://registry.npmjs.org/are-docs-informative/-/are-docs-informative-0.1.1.tgz 85ms (cache miss)
+459 http fetch GET 200 https://registry.npmjs.org/eslint-plugin-jsdoc/-/eslint-plugin-jsdoc-65.4.2.tgz 93ms (cache miss)
+460 http fetch GET 200 https://registry.npmjs.org/to-valid-identifier/-/to-valid-identifier-1.0.0.tgz 97ms (cache miss)
+461 http fetch GET 200 https://registry.npmjs.org/comment-parser/-/comment-parser-1.4.1.tgz 106ms (cache miss)
+462 http fetch GET 200 https://registry.npmjs.org/comment-parser/-/comment-parser-1.4.9.tgz 111ms (cache miss)
+463 http fetch GET 200 https://registry.npmjs.org/@es-joy/estraverse/-/estraverse-7.1.1.tgz 118ms (cache miss)
+464 http fetch GET 200 https://registry.npmjs.org/jsdoc-type-pratt-parser/-/jsdoc-type-pratt-parser-5.9.2.tgz 121ms (cache miss)
+465 http fetch GET 200 https://registry.npmjs.org/@es-joy/jsdoccomment/-/jsdoccomment-1.0.0.tgz 123ms (cache miss)
+466 http fetch GET 200 https://registry.npmjs.org/@es-joy/escodegen/-/escodegen-4.2.0.tgz 137ms (cache miss)
+467 http fetch GET 200 https://registry.npmjs.org/@es-joy/jsdoccomment/-/jsdoccomment-0.62.0.tgz 136ms (cache miss)
+468 silly ADD node_modules/reserved-identifiers
+469 silly ADD node_modules/@sindresorhus/base62
+470 silly ADD node_modules/spdx-license-ids
+471 silly ADD node_modules/spdx-exceptions
+472 silly ADD node_modules/parse-statements
+473 silly ADD node_modules/jsdoc-type-pratt-parser
+474 silly ADD node_modules/esprima
+475 silly ADD node_modules/@es-joy/estraverse
+476 silly ADD node_modules/to-valid-identifier
+477 silly ADD node_modules/spdx-expression-parse
+478 silly ADD node_modules/parse-imports-exports
+479 silly ADD node_modules/object-deep-merge
+480 silly ADD node_modules/html-entities
+481 silly ADD node_modules/comment-parser
+482 silly ADD node_modules/are-docs-informative
+483 silly ADD node_modules/@es-joy/resolve.exports
+484 silly ADD node_modules/@es-joy/jsdoccomment
+485 silly ADD node_modules/@es-joy/escodegen
+486 silly ADD node_modules/@es-joy/escodegen/node_modules/jsdoc-type-pratt-parser
+487 silly ADD node_modules/@es-joy/escodegen/node_modules/comment-parser
+488 silly ADD node_modules/@es-joy/escodegen/node_modules/source-map
+489 silly ADD node_modules/@es-joy/escodegen/node_modules/@es-joy/jsdoccomment
+490 silly ADD node_modules/eslint-plugin-jsdoc
+491 silly ADD node_modules/eslint-plugin-jsdoc/node_modules/escape-string-regexp
+492 verbose cwd /home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet
+493 verbose os Linux 6.8.0-138-generic
+494 verbose node v24.14.1
+495 verbose npm  v11.11.0
+496 notice
+496 notice New minor version of npm available! 11.11.0 -> 11.21.1
+496 notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.1
+496 notice To update run: npm install -g npm@11.21.1
+496 notice  { force: true, Symbol(proc-log.meta): true }
+497 verbose exit 0
+498 info ok

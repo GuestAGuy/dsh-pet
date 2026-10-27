@@ -3,7 +3,7 @@
  *
  * 契约核心三条：
  *   1. 只认四个字面量，其余（缺省 / 大小写不符 / 空白 / 非字符串）一律 `null`；
- *   2. `display: none` **无条件不满足**，`any` 也不满足；
+ *   2. `display: none` 无条件不满足，`any` 也不满足；
  *   3. `both` 只被 `both` 满足（它比"不传/any"更严，不是"哪端都行"的同义词）。
  *
  * 本模块只依赖两个字符串，可完全离线测。用 Node 内置 test runner，不引入任何 npm 依赖。
@@ -31,10 +31,10 @@ describe('displayCovers —— 4×4 匹配矩阵', () => {
     web: { web: true, desktop: false, both: false, any: true },
     desktop: { web: false, desktop: true, both: false, any: true },
     both: { web: true, desktop: true, both: true, any: true },
-    none: { web: false, desktop: false, both: false, any: false },
+    none: { web: false, desktop: false, both: false, any: true },
   };
 
-  test('四行全对：both 只被 both 满足；any 只被前三者满足；none 一律不满足', () => {
+  test('四行全对：both 只被 both 满足；any 不挑显示模式（none 也放行）', () => {
     for (const [display, row] of Object.entries(TABLE)) {
       for (const want of SURFACES) {
         assert.equal(displayCovers(want, display), row[want], `display=${display} want=${want}`);
