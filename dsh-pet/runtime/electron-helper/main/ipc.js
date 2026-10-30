@@ -133,6 +133,16 @@ function registerIpc({ ipcMain, petWindows, shell, openTarget, petRoute }) {
     petWindows.state.inputRegions.set(win.id, { dragging: input.dragging === true, rects });
   });
 
+  // 文本输入框拿到 DOM 焦点不等于窗口拿到键盘焦点：窗口是 showInactive 显示的，从不主动请求焦点，
+  // 于是光标在闪、按键却落到上一个窗口（Linux/X11 上必现）。这里补一次激活请求；
+  // 已聚焦或已销毁时跳过，避免把焦点从别的应用抢过来。
+  ipcMain.on('pet:request-keyboard-focus', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed() || win.isFocused()) return;
+    win.focus();
+    win.webContents.focus();
+  });
+
   // 右键菜单首项（打开软件 / 打开 AI 设置 / 打开网站）：交给系统默认浏览器（等效网页里 Ctrl+点击链接），不建专属窗口——
   // 宠物窗口是透明小窗，不该承载常规网页浏览。URL 由渲染端从 configUrl 推导。
   const openSite = (url) => {

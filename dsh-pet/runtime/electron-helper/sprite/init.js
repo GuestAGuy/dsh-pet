@@ -193,6 +193,18 @@ Object.assign(PetSprite.prototype, {
     this.hit.addEventListener('drop', (e) => this.onDropImage(e), { signal: ac.signal });
     // 悬停时按 T 开对话；窗口未被聚焦时收不到按键（透明窗用 showInactive 显示，不抢焦点）
     window.addEventListener('keydown', (e) => this.onHotkey(e), { signal: ac.signal });
+    // 文本输入拿到焦点时补一次系统键盘焦点：X11/KWin 不会因为 DOM 聚焦就把键盘焦点给窗口，
+    // 不补的话光标在闪、按键却落到上一个窗口。判据复用 shared 的 isTypingTarget，
+    // 对话弹窗与待办面板都是窗口内 DOM，一处委托全覆盖。
+    document.addEventListener(
+      'focusin',
+      (e) => {
+        if (S.isTypingTarget(e.target) && window.petBridge && window.petBridge.requestKeyboardFocus) {
+          window.petBridge.requestKeyboardFocus();
+        }
+      },
+      { signal: ac.signal },
+    );
     // 点击穿透：窗口默认整窗穿透，光标进出身体命中区时翻转可交互；穿透期间 mousemove 由主进程
     // 转发进来（forward:true），mouseleave 保证光标离开窗口立即恢复穿透。
     window.addEventListener('mousemove', (e) => this.onMouseMove(e), { signal: ac.signal });
