@@ -36,7 +36,9 @@ export async function sendChat(baseUrl: string, text: string, attachment?: ChatA
     signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
   const raw: unknown = await res.json().catch(() => null);
-  if (!raw || typeof raw !== 'object') throw new Error('dsh-pet: 对话响应非法');
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('dsh-pet: 对话响应非法');
+  }
   const o = raw as Record<string, unknown>;
   if (o.ok !== true) {
     return {

@@ -7,12 +7,21 @@
 import type { Category, EventSlot, Events, Weights } from './types.ts';
 
 /** 从池里等概率抽一个；exclude 避开某个名字（减少连续重复）。 */
-export const pick = <T>(pool: T[], exclude?: T): T => {
+export const pick = <T>(pool: readonly T[], exclude?: T): T => {
   const entries = exclude ? pool.filter((n) => n !== exclude) : pool;
   // 排除后池空（单元素池 + 排除自己）：退回原池抽，宁可重复也不返回 undefined
   const src = entries.length ? entries : pool;
   return src[Math.floor(Math.random() * src.length)];
 };
+
+/**
+ * 挑一套睡觉动作：整套随机，调用方拿到的三段必须来自同一套（否则会「蹲着入睡、趴着醒来」）。
+ *
+ * @param sets - 配置里的 sleep 套数组；段内多候选由调用方对选中的那套再 `pick` 一次。
+ * @returns 选中的套；空数组返回 null，调用方据此隐藏「睡觉」入口。
+ */
+export const pickSleepSet = <T>(sets: readonly T[]): T | null =>
+  sets.length > 0 ? sets[Math.floor(Math.random() * sets.length)] : null;
 
 /** 事件档位取值：字符串槽位原样返回（固定播放）；数组槽位 = 档内候选，随机抽 1 并尽量避开 exclude。
  *  排除后池空（单候选且排除自己）退回原数组——宁可重复，也不返回 undefined。 */

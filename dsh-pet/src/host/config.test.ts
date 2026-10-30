@@ -165,6 +165,55 @@ describe('readAllConfig —— events 缺失仍回退默认（既有行为不回
   });
 });
 
+describe('readAllConfig —— animations.sleep（可选段）校验', () => {
+  /** 用给定 sleep 覆盖内置默认的 animations，读回成品里 main 条目的 animations */
+  function mergedAnimations(sleep: unknown): Record<string, unknown> {
+    const animations = sleep === undefined ? BASE.animations : { ...BASE.animations, sleep };
+    return readAllConfig(withBase({}, { animations })).main.animations as Record<string, unknown>;
+  }
+
+  test('合法的一整套原样保留（start / loop / end 三个候选数组）', () => {
+    const sleep = [{ start: ['蹲-开始'], loop: ['蹲-循环'], end: ['蹲-起来'] }];
+    assert.deepEqual(mergedAnimations(sleep).sleep, sleep);
+  });
+
+  test('不写 sleep：合法，该条目只是没有睡觉功能（其余动画不受影响）', () => {
+    const anim = mergedAnimations(undefined);
+    assert.equal(anim.sleep, undefined);
+    assert.deepEqual(anim.idle, BASE.animations.idle);
+  });
+
+  test('非法形态整段回退默认：空套数组 / 空段 / 缺段 / 空串成员 / 非字符串成员 / 非数组', () => {
+    const bad: unknown[] = [
+      [],
+      [{ start: [], loop: ['蹲-循环'], end: ['蹲-起来'] }],
+      [{ start: ['蹲-开始'], loop: ['蹲-循环'] }],
+      [{ start: ['蹲-开始'], loop: ['蹲-循环'], end: [''] }],
+      [{ start: ['蹲-开始'], loop: ['蹲-循环'], end: [1] }],
+      'sleep',
+    ];
+    for (const sleep of bad) {
+      assert.deepEqual(mergedAnimations(sleep), BASE.animations, `非法 sleep 必须整段回退：${JSON.stringify(sleep)}`);
+    }
+  });
+
+  test('种类文件自己写 animations 但不写 sleep：合法，只是该种类没有睡觉功能', () => {
+    const paths = withBase({});
+    mkdirSync(paths.petDir, { recursive: true });
+    writeFileSync(
+      join(paths.petDir, 'pig-config.json'),
+      JSON.stringify({
+        pets: [{ id: 'pig1', name: '猪', display: 'web' }],
+        animations: BASE.animations,
+        animationWeights: BASE.animationWeights,
+      }),
+    );
+    const pig = readAllConfig(paths).pig.animations as Record<string, unknown>;
+    assert.equal(pig.sleep, undefined);
+    assert.deepEqual(pig.idle, BASE.animations.idle, '没写 sleep 不得让整份 animations 失效');
+  });
+});
+
 /** 跑一趟 readAllConfig：base 为内置默认（可注入表情包开关），overlay 为用户层 */
 function withBase(baseExtra: Record<string, unknown>, overlay?: Record<string, unknown>): ConfigPaths {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-pet-config-test-'));
@@ -531,6 +580,42 @@ describe('saveUserConfig —— 表情包配图开关（白名单 + 透传保留
   });
 });
 
+describe('saveUserConfig —— 对话动作联动开关（白名单 + 透传保留）', () => {
+  test('随请求体写入，缺省不凭空造字段', () => {
+    const out = saveOnce({ pets: PETS, chatAnimationEnabled: false });
+    assert.equal(out?.chatAnimationEnabled, false);
+    assert.equal('chatAnimationEnabled' in (saveOnce({ pets: PETS }) ?? {}), false);
+  });
+
+  test('传非布尔 → 整体拒绝（宿主回 400）', () => {
+    assert.equal(saveOnce({ pets: PETS, chatAnimationEnabled: 'yes' }), null);
+  });
+
+  test('请求体传了就覆盖磁盘旧值', () => {
+    const out = saveOnce({ pets: PETS, chatAnimationEnabled: true }, { pets: PETS, chatAnimationEnabled: false });
+    assert.equal(out?.chatAnimationEnabled, true);
+  });
+});
+
+describe('readAllConfig —— 对话动作联动开关合并（用户层可覆盖 / 非法回退默认）', () => {
+  test('内置默认 true；用户层写 false → 读 false', () => {
+    assert.equal(readAllConfig(withBase({ chatAnimationEnabled: true })).main.chatAnimationEnabled, true);
+    assert.equal(
+      readAllConfig(withBase({ chatAnimationEnabled: true }, { chatAnimationEnabled: false })).main
+        .chatAnimationEnabled,
+      false,
+    );
+  });
+
+  test('用户层写了非法值 → 回退内置默认', () => {
+    assert.equal(
+      readAllConfig(withBase({ chatAnimationEnabled: true }, { chatAnimationEnabled: 'yes' })).main
+        .chatAnimationEnabled,
+      true,
+    );
+  });
+});
+
 describe('readAllConfig —— 表情包开关合并（缺失取默认 / 非法回退默认）', () => {
   test('内置默认有值 → 用户层没写时读得到', () => {
     const merged = readAllConfig(withBase({ whisperImageEnabled: true, chatImageEnabled: false }));
@@ -688,6 +773,56 @@ describe('saveUserConfig —— 实例级人设 whisperPrompt（白名单 + 清�
   });
 });
 
+describe('配置合并与保存 —— sizePercent（合法才落键，缺省按默认 100 消费）', () => {
+  const petAt = (merged: Record<string, Record<string, unknown>>): Record<string, unknown> =>
+    (merged.main.pets as Record<string, unknown>[])[0];
+
+  test('实例写了合法百分比 → 原样带出', () => {
+    const pet = petAt(readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: 40 }] })));
+    assert.equal(pet.sizePercent, 40);
+  });
+
+  test('没写 → 不落键（渲染侧按默认 100，文件不长多余的键；无用户层时形状也一致）', () => {
+    assert.equal('sizePercent' in petAt(readAllConfig(withBase({}))), false);
+  });
+
+  test('非数字或小于 1 → 不落键并告警，不抛错', () => {
+    for (const value of [0, -5, '40', null, { a: 1 }, true]) {
+      const pet = petAt(readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: value }] })));
+      assert.equal('sizePercent' in pet, false, `${JSON.stringify(value)} 应被忽略`);
+    }
+  });
+
+  test('边界值与超过 100 都合法（不设上限）', () => {
+    for (const value of [1, 100, 150]) {
+      const pet = petAt(readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: value }] })));
+      assert.equal(pet.sizePercent, value);
+    }
+  });
+
+  test('saveUserConfig：合法百分比落盘（不在白名单就会被保存悄悄丢掉）', () => {
+    const out = saveOnce({ pets: [{ ...PETS[0], sizePercent: 40 }] });
+    assert.equal((out?.pets as Record<string, unknown>[])[0].sizePercent, 40);
+  });
+
+  test('saveUserConfig：未传 → 不凭空造字段', () => {
+    const out = saveOnce({ pets: PETS });
+    assert.equal('sizePercent' in (out?.pets as Record<string, unknown>[])[0], false);
+  });
+
+  test('saveUserConfig：传了非法值 → 整体拒绝（宿主回 400，不静默丢输入）', () => {
+    for (const value of [0, -1, '40']) {
+      assert.equal(saveOnce({ pets: [{ ...PETS[0], sizePercent: value }] }), null, `${JSON.stringify(value)} 应被拒绝`);
+    }
+  });
+
+  test('合并结果直接喂回 save：百分比往返不丢', () => {
+    const merged = readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: 40 }] }));
+    const layerPets = merged.main.pets as Record<string, unknown>[];
+    assert.equal((saveOnce({ pets: layerPets })?.pets as Record<string, unknown>[])[0].sizePercent, 40);
+  });
+});
+
 describe('saveUserConfig —— 物理参数 physics（白名单 + 透传保留）', () => {
   const PHYS: Record<string, unknown> = BASE.physics;
 
@@ -705,6 +840,16 @@ describe('saveUserConfig —— 物理参数 physics（白名单 + 透传保留�
   test('请求体覆盖磁盘旧值（与四个全局开关同一语义）', () => {
     const out = saveOnce({ pets: PETS, physics: { ...PHYS, throwPower: 2 } }, { pets: PETS, physics: PHYS });
     assert.equal((out?.physics as Record<string, unknown>).throwPower, 2);
+  });
+
+  test('hapticEnabled：缺键合法（旧配置按默认开），非布尔整段拒绝', () => {
+    const missing: Record<string, unknown> = { ...PHYS };
+    delete missing.hapticEnabled;
+    const kept = saveOnce({ pets: PETS, physics: missing });
+    assert.ok(kept, '缺键不该被整段拒绝');
+    assert.equal('hapticEnabled' in (kept?.physics as Record<string, unknown>), false, '没写就不凭空补键');
+    assert.ok(saveOnce({ pets: PETS, physics: { ...PHYS, hapticEnabled: false } }), '显式关了要能落盘');
+    assert.equal(saveOnce({ pets: PETS, physics: { ...PHYS, hapticEnabled: 'yes' } }), null);
   });
 
   test('非法值 → 整体拒绝（宿主回 400；与读取侧 physicsValid 同一套规则）', () => {
@@ -781,6 +926,44 @@ describe('saveUserConfig —— 碎碎念 / 对话模型（白名单 + 透传保
     for (const [name, value] of bad) {
       assert.equal(saveOnce({ pets: PETS, whisperModel: value }), null, `whisperModel ${name} 必须被拒绝`);
       assert.equal(saveOnce({ pets: PETS, chatModel: value }), null, `chatModel ${name} 必须被拒绝`);
+    }
+  });
+});
+
+describe('saveUserConfig —— 语音细分开关（白名单 + 透传保留）', () => {
+  test('随请求体写入（设置页「语音播报」卡的两个开关）', () => {
+    const out = saveOnce({ pets: PETS, voiceWhisperEnabled: true, voiceTodoEnabled: true });
+    assert.equal(out?.voiceWhisperEnabled, true);
+    assert.equal(out?.voiceTodoEnabled, true);
+  });
+
+  test('false 是合法值，照常落盘', () => {
+    const out = saveOnce({ pets: PETS, voiceWhisperEnabled: false, voiceTodoEnabled: false });
+    assert.equal(out?.voiceWhisperEnabled, false, 'false 不能被当成「没传」而走透传');
+    assert.equal(out?.voiceTodoEnabled, false);
+  });
+
+  test('未传时透传磁盘旧值；磁盘上也没有则不凭空造字段', () => {
+    const kept = saveOnce({ pets: PETS }, { pets: PETS, voiceWhisperEnabled: true, voiceTodoEnabled: true });
+    assert.equal(kept?.voiceWhisperEnabled, true, '未传时必须原样保留磁盘上的手改值');
+    assert.equal(kept?.voiceTodoEnabled, true);
+    const fresh = saveOnce({ pets: PETS }) ?? {};
+    assert.equal('voiceWhisperEnabled' in fresh, false, '磁盘上也没有时不得凭空写入');
+    assert.equal('voiceTodoEnabled' in fresh, false);
+  });
+
+  test('非布尔 → 整体拒绝（宿主回 400；与读取侧 topFieldValid 同一套规则）', () => {
+    for (const value of ['true', 1, null, {}, []]) {
+      assert.equal(
+        saveOnce({ pets: PETS, voiceWhisperEnabled: value }),
+        null,
+        `voiceWhisperEnabled ${JSON.stringify(value)} 必须被拒绝`,
+      );
+      assert.equal(
+        saveOnce({ pets: PETS, voiceTodoEnabled: value }),
+        null,
+        `voiceTodoEnabled ${JSON.stringify(value)} 必须被拒绝`,
+      );
     }
   });
 });
@@ -1011,8 +1194,9 @@ describe('syncUserConfigFromDefault —— 同步（内置默认原文写入用�
 /**
  * 文件宠物条目的基座 —— 「全局默认 + 种类可覆盖」。
  *
- * 判据：GLOBAL_DEFAULT_KEYS 那 9 个（physics / confineToScreen / 两个配图开关 / chatImageLimit /
- * chatMemoryRounds / whisperModel / chatModel / eventsRefreshSec）是用户级「成本 / 偏好 /
+ * 判据：GLOBAL_DEFAULT_KEYS 列出的字段（physics / confineToScreen / 两个配图开关 /
+ * 对话动作联动开关 / chatImageLimit / chatMemoryRounds / whisperModel / chatModel /
+ * eventsRefreshSec 等）是用户级「成本 / 偏好 /
  * 环境 / 节奏」参数，用户层写了就对所有条目生效（含 pet pack）；种类文件自己写了就覆盖
  * 自己那份。其余顶层字段（人设 / 表情包 / 动画池 / 文案）的基座仍是内置默认——
  * 一个种类一份人设、一份池、一个表情包目录，各写一份才是 pet pack 的意义。
@@ -1023,6 +1207,7 @@ describe('文件宠物条目 —— 全局默认（用户层作基座）+ 种类
     ...BASE,
     whisperImageEnabled: true,
     chatImageEnabled: true,
+    chatAnimationEnabled: true,
     chatImageLimit: 0,
     confineToScreen: false,
     whisperModel: { provider: '', model: '' },
@@ -1070,13 +1255,14 @@ describe('文件宠物条目 —— 全局默认（用户层作基座）+ 种类
     }
   }
 
-  test('用户层写了这 9 个字段 → 种类条目逐个继承（不再只吃内置默认）', () => {
+  test('用户层写了这 10 个字段 → 种类条目逐个继承（不再只吃内置默认）', () => {
     const out = merged({
       overlay: {
         physics: { ...(BASE_FULL.physics as Record<string, unknown>), petCollision: true, gravity: 999 },
         confineToScreen: true,
         whisperImageEnabled: false,
         chatImageEnabled: false,
+        chatAnimationEnabled: false,
         chatImageLimit: 4,
         chatMemoryRounds: 9,
         whisperModel: { provider: 'p1', model: 'm1' },
@@ -1091,6 +1277,7 @@ describe('文件宠物条目 —— 全局默认（用户层作基座）+ 种类
     assert.equal(pig.confineToScreen, true);
     assert.equal(pig.whisperImageEnabled, false);
     assert.equal(pig.chatImageEnabled, false);
+    assert.equal(pig.chatAnimationEnabled, false, 'chatAnimationEnabled 应继承用户层');
     assert.equal(pig.chatImageLimit, 4, 'chatImageLimit 应继承用户层');
     assert.equal(pig.chatMemoryRounds, 9);
     assert.deepEqual(pig.whisperModel, { provider: 'p1', model: 'm1' });

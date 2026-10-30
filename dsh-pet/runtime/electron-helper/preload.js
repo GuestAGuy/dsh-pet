@@ -44,6 +44,11 @@ contextBridge.exposeInMainWorld('petBridge', {
   setInputRegions(input) {
     ipcRenderer.send('pet:input-regions', input);
   },
+  // 文本输入拿到 DOM 焦点时向主进程要一次系统键盘焦点：X11 上 DOM 焦点不等于 X 键盘焦点，
+  // 窗口又是 showInactive 显示的，不要就一直打不了字（处理在 main/ipc.js）。
+  requestKeyboardFocus() {
+    ipcRenderer.send('pet:request-keyboard-focus');
+  },
   // 右键菜单「打开网站」：去向由主进程按宿主形态决定——桌面应用宿主唤起主窗口，否则用系统浏览器打开站点。
   openDshSite(url) {
     ipcRenderer.send('pet:open-site', { url });

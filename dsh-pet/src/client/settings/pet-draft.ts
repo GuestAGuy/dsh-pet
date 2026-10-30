@@ -37,6 +37,7 @@ export function draftPet(template: Pet, id: string): Pet {
     id,
     name: id,
     size: template.size,
+    sizePercent: template.sizePercent ?? 100,
     balanceEnabled: template.balanceEnabled,
     whisperEnabled: template.whisperEnabled,
     workStatusEnabled: template.workStatusEnabled,

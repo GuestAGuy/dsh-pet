@@ -7,15 +7,24 @@
  */
 import { join } from 'node:path';
 import { generateChat, type ChatMemoryMessage } from '../chat.ts';
+import { chatActionNames } from '../chat-action.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { composeSystemPrompt, petPersona } from '../persona.ts';
 import { findPetInstance, readAllConfig, removeRoundsByTs, sliceMemoryRounds } from '../config.ts';
 import type { PetImageRef } from '../image-attachment.ts';
-import { limitPool, pickMeme, readMemePool } from '../memes.ts';
+import { limitPool, matchMeme, pickMeme, readMemePool } from '../memes.ts';
 import { generateWhisper } from '../whisper.ts';
+import { createMemoryOrphans } from './memory-orphans.ts';
 import { configuredModel } from '../model-selection.ts';
+import { SLEEP_TALK_INSTRUCTION } from '../whisper.ts';
+import { pickVoiceSurface, type VoiceTarget } from '../surface.ts';
 import type { HostSetup } from './setup.ts';
 import type { HostContext } from './context.ts';
+
+/** 这一句该由哪一端念：取宠物实例的 display 推导（桌面优先）；两端都不显示时为 `undefined`。 */
+function voiceTargetFor(pet: Record<string, unknown>): VoiceTarget | undefined {
+  return pickVoiceSurface(String(pet.display ?? '')) ?? undefined;
+}
 
 /** 对话与记忆的输入：装配期对象与更早的工厂。 */
 export type ChatMemoryInput = {
@@ -24,6 +33,7 @@ export type ChatMemoryInput = {
 } & Pick<HostSetup, 'configPaths'> &
   Pick<HostSetup, 'log'> &
   Pick<HostSetup, 'memeDirsFor'> &
+  Pick<HostSetup, 'playback'> &
   Pick<HostSetup, 'state'> &
   Pick<HostSetup, 'userRoot'>;
 
@@ -31,7 +41,7 @@ export type ChatMemoryInput = {
  * 创建对话与记忆。
  */
 export function createChatMemory(deps: ChatMemoryInput) {
-  const { ctx, configPaths, log, memeDirsFor, state, userRoot } = deps;
+  const { ctx, configPaths, log, memeDirsFor, playback, state, userRoot } = deps;
   // 命令「当前桌宠」（/pet 选择、/chat 使用）：全局单值不分会话；进程内内存，重启回默认第一只
   let activePetId = '';
 
@@ -100,29 +110,53 @@ export function createChatMemory(deps: ChatMemoryInput) {
     return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 5;
   };
 
-  /** 生成并返回某宠物的一句碎碎念（周期调度与菜单手动触发共用）：人设取它自己的 whisperPrompt，
+  /** 生成并返回某宠物的一句碎碎念（周期调度、菜单手动触发与命令行共用）：人设取它自己的 whisperPrompt，
    *  没写回落到所属条目；成功写进 S 的 pets.<id>.say——碎碎念 / 命令气泡 / 对话回复在前端是同一条
    *  展示链路，所以共用一个叶子。配图开关开启时从表情包池随机抽 1 张。
-   *  失败带回真实 reason（含 unknown-pet），成功带回生成的文本——调用方不必再拉一拍 /state。 */
+   *  失败带回真实 reason（含 unknown-pet / unknown-image），成功带回生成的文本——调用方不必再拉一拍 /state。
+   *
+   *  @param petId - 目标宠物实例 id。
+   *  @param image - 指定配图的名称：给了就只用这张（不受 whisperImageEnabled 门控，手动点图是显式意图），
+   *  不在池内返回 unknown-image；缺省 = 按开关随机抽或纯文本。
+   *  @param voiceTo - 这一句该由哪一端念；缺省按它自己的 display 推导（桌面优先，见 {@link pickVoiceSurface}）。
+   *  路由层带 `?surface=` 的会显式传请求面，其余调用点留空即可。
+   *  @param kind - 这次生成的来源：`whisper` = 周期调度，受 `voiceWhisperEnabled` 管；`manual` = 菜单、
+   *  斜杠命令、路由主动触发，不看那个开关（用户主动点的就是这一句）。缺省 `manual`。
+   */
   const publishWhisper = async (
     petId: string,
+    image?: string,
+    voiceTo?: VoiceTarget,
+    kind: 'whisper' | 'manual' = 'manual',
   ): Promise<
     | { ok: true; text: string; image?: string }
-    | { ok: false; reason: 'provider-missing' | 'generate-error' | 'unknown-pet'; message?: string }
+    | { ok: false; reason: 'provider-missing' | 'generate-error' | 'unknown-pet' | 'unknown-image'; message?: string }
   > => {
     const cfg = readAllConfig(configPaths);
     const found = findPetInstance(cfg, petId);
     // 宠物可能在「校验那次读」与这里之间被删（配置随时会变，两次读之间就是窗口）：
     // 明确失败、不生成不写 S——写下去就是一只已不存在宠物的幽灵叶子（常驻到进程重启）。
     if (!found) return { ok: false, reason: 'unknown-pet', message: '没有这只桌宠：' + petId };
+    // 调用方没指定就按这只宠物自己的 display 推（桌面优先）。规则只写在这一处，
+    // 周期调度、斜杠命令这些调用点不必各算一遍。周期碎碎念另外受自己的开关管：
+    // 关掉就不写 voiceTo（叶子不带这个键 = 谁都不念），气泡照旧弹。
+    const whisperVoiceOn = cfg.main?.voiceWhisperEnabled === true;
+    const target = kind === 'whisper' && !whisperVoiceOn ? undefined : (voiceTo ?? voiceTargetFor(found.pet));
     const system = petSystemPrompt(found);
-    // 配图：开关关闭 / 池为空 / 池内图片全缺失 → 纯文本（不报错，只是没有图）
-    const meme =
-      found.conf.whisperImageEnabled === true
-        ? pickMeme(readMemePool(found.conf.memes, memeDirsFor(found.entry)))
-        : undefined;
+    // 池只算一次：点名的图与随机抽图共用同一份（含文件存在性判定）。
+    const pool = readMemePool(found.conf.memes, memeDirsFor(found.entry));
+    // 点名了却没命中 = 配置写错或图已被删：明确失败，不静默换成另一张（点了 A 却看到 B 会以为坏了）。
+    const forced = image === undefined ? undefined : matchMeme(pool, image);
+    if (image !== undefined && forced === undefined) {
+      return { ok: false, reason: 'unknown-image', message: '表情包不在池内：' + image };
+    }
+    const meme = forced ?? (found.conf.whisperImageEnabled === true ? pickMeme(pool) : undefined);
     // 模型：条目配置的 whisperModel 优先（留空 = 不指定）；生成侧失败会回落到当前对话的模型重试一次
-    const result = await generateWhisper(ctx, system, meme, configuredModel(found.conf, 'whisperModel'));
+    const result = await generateWhisper(ctx, {
+      system,
+      meme,
+      preferred: configuredModel(found.conf, 'whisperModel'),
+    });
     if (!result.ok) {
       // 失败不写 S：静默跳过 + warn，不伪造文案、不弹错误气泡
       log.warn(
@@ -136,7 +170,11 @@ export function createChatMemory(deps: ChatMemoryInput) {
       // provider-missing 就会在边界被吞掉（API.md 描述的降级 reason 正是它）。
       return result;
     }
-    state.writePet(petId, 'say', result.image ? { text: result.text, image: result.image } : { text: result.text });
+    state.writePet(petId, 'say', {
+      text: result.text,
+      ...(result.image ? { image: result.image } : {}),
+      ...(target ? { voiceTo: target } : {}),
+    });
     // 成功也留一行：否则 logs.txt 里「没触发」与「触发了并且成功」无法区分。
     log.info(
       `[dsh-pet] 碎碎念生成成功 pet=${petId}，${result.text.length} 字` +
@@ -144,6 +182,34 @@ export function createChatMemory(deps: ChatMemoryInput) {
     );
     // 文本随返回值带出，且与刚写进叶子的是同一个变量：两条出口给同一份文本，不是一个真相两个版本
     return { ok: true, text: result.text, ...(result.image ? { image: result.image } : {}) };
+  };
+
+  /** 生成并写一句梦话：system 只用人设，功能指令在 whisper（与碎碎念同属代码常量）；不配图、不念、不换动画。
+   *  睡着时「换动画」本身就是打扰，所以写 `say` 显式 `anim: false`，也不写 `voiceTo`。
+   *  @returns 是否真的生成并写进了 S；失败只留一行日志，调度下一拍再试。 */
+  const publishSleepTalk = async (petId: string): Promise<boolean> => {
+    const cfg = readAllConfig(configPaths);
+    const found = findPetInstance(cfg, petId);
+    if (!found) return false;
+    const system = petSystemPrompt(found);
+    const result = await generateWhisper(ctx, {
+      system,
+      preferred: configuredModel(found.conf, 'whisperModel'),
+      instruction: SLEEP_TALK_INSTRUCTION,
+    });
+    if (!result.ok) {
+      log.warn(
+        '[dsh-pet] 梦话生成失败 pet=' +
+          petId +
+          ' reason=' +
+          result.reason +
+          (result.message ? ' ' + result.message : ''),
+      );
+      return false;
+    }
+    state.writePet(petId, 'say', { text: result.text, anim: false });
+    log.info(`[dsh-pet] 梦话生成成功 pet=${petId}，${result.text.length} 字`);
+    return true;
   };
 
   /** 与某只宠物对话：截取最近记忆 → 生成回复 → 写入记忆 → 写进 S 的 pets.<id>.say。
@@ -172,6 +238,8 @@ export function createChatMemory(deps: ChatMemoryInput) {
         found.conf.chatImageEnabled === true
           ? limitPool(readMemePool(found.conf.memes, memeDirsFor(found.entry)), Number(found.conf.chatImageLimit))
           : [];
+      // 动作名单：开关开启才取（关掉 = 不注入也不解析）；名单本身为空（没配 categories）同样等于关闭。
+      const actions = found.conf.chatAnimationEnabled === true ? chatActionNames(found.conf.animations) : [];
       const mem = await readMemory();
       // 坏结构（数组/标量）按空桶重建；messages 不是数组的条目按新会话处理，避免 push 到坏对象上崩溃
       const bucket =
@@ -200,6 +268,7 @@ export function createChatMemory(deps: ChatMemoryInput) {
         history: list,
         userText: text,
         pool,
+        actions,
         preferred: configuredModel(found.conf, 'chatModel'),
         image,
       });
@@ -213,14 +282,28 @@ export function createChatMemory(deps: ChatMemoryInput) {
         content: generated.text,
         ts: now,
         ...(generated.image ? { meme: generated.image } : {}),
+        // 动作名与配图名同类：只存不送——历史回放只带正文，否则每轮都会把动作标记重发一遍
+        ...(generated.action ? { action: generated.action } : {}),
       });
       await writeMemory(mem);
-      // 回复写进 S（与碎碎念同一个叶子：前端本来就是同一条展示链路）
-      state.writePet(
-        petId,
-        'say',
-        generated.image ? { text: generated.text, image: generated.image } : { text: generated.text },
-      );
+      // 动作先写：与 POST /anim 同一条写回链路（记录 + anim 叶子），渲染端据此播放并回报执。
+      if (generated.action !== undefined) {
+        const record = playback.create(petId, generated.action);
+        state.writePet(petId, 'anim', { name: generated.action, playbackId: record.playbackId });
+      }
+      // 回复写进 S（与碎碎念同一个叶子：前端本来就是同一条展示链路）。
+      // 该由哪一端念按这只宠物的 display 推：对话请求带的是 surface=any，本来就没有具体的一端可用。
+      const replyVoiceTo = voiceTargetFor(found.pet);
+      // 只有动作没有正文（模型只写了标记）→ 不写 say，避免弹一个空气泡。
+      if (generated.text !== '') {
+        state.writePet(petId, 'say', {
+          text: generated.text,
+          ...(generated.image ? { image: generated.image } : {}),
+          // 带动作时显式关掉碎碎念动画：气泡照弹，但不把刚点播的动作顶掉
+          ...(generated.action !== undefined ? { anim: false } : {}),
+          ...(replyVoiceTo ? { voiceTo: replyVoiceTo } : {}),
+        });
+      }
       // 同一份文本随返回值带出（叶子照写，不是二选一）
       return { ok: true as const, text: generated.text, ...(generated.image ? { image: generated.image } : {}) };
     });
@@ -259,6 +342,15 @@ export function createChatMemory(deps: ChatMemoryInput) {
       return { ok: true as const, removed };
     });
 
+  /** 已删宠物残留历史的查询与清理（判定与读写细节见 ./memory-orphans）。 */
+  const { orphanHistory, deleteOrphans } = createMemoryOrphans({
+    configPaths,
+    readMemory,
+    writeMemory,
+    withLock: withMemoryLock,
+    log,
+  });
+
   /** 当前活跃宠物 id（会话事件写入，余额与碎念读取）。 */
   const getActivePetId = (): string => activePetId;
 
@@ -272,8 +364,11 @@ export function createChatMemory(deps: ChatMemoryInput) {
     readMemory,
     memoryRounds,
     publishWhisper,
+    publishSleepTalk,
     chatWithPet,
     deleteHistory,
+    orphanHistory,
+    deleteOrphans,
     getActivePetId,
     setActivePetId,
   };

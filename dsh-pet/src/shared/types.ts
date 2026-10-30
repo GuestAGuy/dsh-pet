@@ -45,6 +45,15 @@ export type EventSlot = string | string[];
 /** 事件动画：事件名 → 档位槽位数组（数组顺序即档位顺序；不进随机链，只由代码显式触发）。 */
 export type Events = Record<string, EventSlot[]>;
 
+/** 一套睡觉动作：入睡 → 循环 → 醒来。
+ *  三段各是候选数组（进入该段时随机抽一个）；整套由 animations.sleep 的外层数组随机挑选，
+ *  三段必须来自同一套，否则会出现「蹲着入睡、趴着醒来」。 */
+export interface SleepSet {
+  start: string[];
+  loop: string[];
+  end: string[];
+}
+
 /** 动画权重。 */
 export interface Weights {
   idle: number;
@@ -61,6 +70,9 @@ export interface Animations {
   moves: MovesConfig;
   categories: Category[];
   events: Events;
+  /** 睡觉动作套（可选）：没写 = 该条目没有睡觉功能，右键菜单不出现「睡觉」。
+   *  写了就「整套随机 → 段内随机」取，结构见 {@link SleepSet}。 */
+  sleep?: SleepSet[];
 }
 
 /** 一只宠物（与 config.jsonc 的 pets[i] 同形，position 嵌套）。
@@ -74,11 +86,15 @@ export interface Pet {
    *  缺失或留空按该宠物 id 处理并告警。 */
   name: string;
   size: number;
+  /** 人物占屏宽上限（%，默认 100，不设上限）：按本体占屏换算出画框宽，`size` 仍是画框上限。
+   *  100 ≈ 不限制（宽窗口下与按 px 显示一致）；填 150 人物会宽于屏幕，但画框仍被 `size` 夹住。
+   *  小于 1 或非数字回落到 100。只作用于浏览器半侧——桌面透明窗始终用 `size`。 */
+  sizePercent?: number;
   /** 是否启用余额功能：true = 触发余额动画并显示余额气泡，false = 该宠物完全禁用余额。缺失即配置错误 */
   balanceEnabled: boolean;
   /** 是否启用碎碎念：true = 按 eventsRefreshSec.whisper 周期生成一句话并播碎碎念动画，false = 禁用。
    *  缺失默认 true；碎碎念每次生成都会调用当前对话的模型，本地 LLM 单并发时会顶掉正在跑的任务的 KV cache，
-   *  不需要的宠物请显式写 false。 */
+   *  不需要的宠物请显式写 false。display 为 none 的宠物整体跳过：不生成、不调模型。 */
   whisperEnabled: boolean;
   /** 是否启用工作状态联动：true = 监听 DSH 会话事件，按 animations.events.workStatus 切档位动画与气泡。
    *  缺失默认 true。监听不调用模型，无 KV cache 风险。 */
@@ -106,6 +122,12 @@ export interface Pet {
   physics?: PhysicsParams;
   /** 全局默认：是否锁定在当前屏幕——抛掷与自主漫游都只在当前所在那块屏内活动 */
   confineToScreen?: boolean;
+  /** 条目级：睡觉期间被手动打扰时弹的拒绝台词（非空字符串数组，随机挑一句）。 */
+  sleepRefuseTexts?: string[];
+  /** 条目级：入睡时弹的台词（播「开始」时随机挑一句）。 */
+  sleepStartTexts?: string[];
+  /** 条目级：醒来时弹的台词（播「起来」时随机挑一句）。 */
+  sleepEndTexts?: string[];
   /** 条目级：工作状态气泡文案（外层索引 = 档位 0..5，内层每档可多句随机抽）。
    *  整字段缺失 = 不弹工作状态文本，只播动画。 */
   workStatusTexts?: string[][];
@@ -115,6 +137,16 @@ export interface Pet {
   chatModel?: ModelSelection;
   /** 全局默认：字体（种类 / 字号 / 是否随宠物大小缩放） */
   font?: FontConfig;
+  /** 条目级：表情包清单（名称 → 给模型看的描述），合并器吹进每只实例、多实例共享。
+   *  顺序即配置书写顺序，也就是 chatImageLimit 截取「前 N 张」的依据。 */
+  memes?: Record<string, string>;
+  /** 条目级：对话配图开关。true = 对话生成时把表情包清单交给模型按语境选一张；缺省按关处理。 */
+  chatImageEnabled?: boolean;
+  /** 条目级：对话动作联动开关。true = 对话时把 categories 下的动作清单交给模型，
+   *  由模型在语境贴合时挑一个当场表演；缺省按关处理。 */
+  chatAnimationEnabled?: boolean;
+  /** 条目级：对话配图张数上限（非负整数，0 = 不限制）。只截「交给模型的清单」，不截碎碎念抽图。 */
+  chatImageLimit?: number;
 }
 
 /** 一处「服务商 + 模型」选择（config.jsonc 的 whisperModel / chatModel 段）。
@@ -141,6 +173,10 @@ export interface PhysicsParams {
   throwPower: number;
   /** 多宠物互相碰撞开关：true = 飞行中的宠物撞到其它宠物时按动量守恒弹开；false = 互相穿过（默认） */
   petCollision: boolean;
+  /** 碰撞触觉反馈：true（默认）时撞墙 / 落地 / 撞顶与宠物互撞各震一下。
+   *  仅浏览器半侧生效，且要求环境有 Vibration API——iOS 与桌面端没有，静默跳过。
+   *  缺省按 true；旧配置里没有这个键也算开。 */
+  hapticEnabled?: boolean;
 }
 
 /** 字体种类预设 id（font.family 白名单；清单与对应字体栈见 shared/fonts.ts）。 */
@@ -174,6 +210,8 @@ export interface ClientConfig {
   whisperImageEnabled: boolean;
   /** 对话配图开关：true = 把表情包清单交模型按语境选 1 张（可不选），false = 纯文本 */
   chatImageEnabled: boolean;
+  /** 对话动作联动开关：true = 把 categories 下的动作清单交模型按语境挑一个当场表演，false = 纯文字 */
+  chatAnimationEnabled: boolean;
   /** 是否锁定在当前屏幕：true = 宠物只在当前所在那块屏内活动——甩出去只在该屏内弹（屏缝当墙），
    *  自主漫游也只在屏内走；false = 跨屏飞行与跨屏行走。根字段，不属于 physics——它不改手感，只改「被允许去哪」。
    *  条目级，必填，缺失即配置错误。 */

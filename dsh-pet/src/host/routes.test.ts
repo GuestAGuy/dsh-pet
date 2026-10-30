@@ -142,7 +142,8 @@ before(() => {
         {
           method,
           url,
-          headers,
+          // 真实 IncomingMessage 恒有 headers；sendFile 用它读 Range（测试按需注入）
+          headers: headers ?? {},
           on: (event: string, cb: (chunk?: Buffer) => void) => {
             if (event === 'data' && body !== undefined) queueMicrotask(() => cb(Buffer.from(body, 'utf8')));
             if (event === 'end') queueMicrotask(() => cb());
@@ -558,6 +559,16 @@ describe('pic/memes 路由 —— 表情包素材归属（与 thumb 同一套语
   });
 });
 
+describe('/logo —— 插件 logo（对话面板的宠物头像）', () => {
+  test('只接受裸路径：多一段就 400，不把 assets 根开放成静态目录', async () => {
+    assert.equal((await call('/dsh-pet-7340/logo/x.png')).status, 400);
+  });
+
+  test('源码形态下包内 assets 不可达 → 404（真实安装里读 assets/logo.png）', async () => {
+    assert.equal((await call('/dsh-pet-7340/logo')).status, 404);
+  });
+});
+
 describe('pic/memes 路由 —— 素材根不得当路径片段（与 thumb 同一条不变式）', () => {
   test('%5C 反斜杠穿越（Windows）→ 400，且绝不读到用户根之外', async () => {
     const r = await call('/dsh-pet-7340/pic/memes/..%5C..%5C..%5Coutside-memes/leak.png');
@@ -897,5 +908,39 @@ describe('CSRF 防线 —— 浏览器跨站请求在 handler 层被拒绝', () 
     });
     assert.equal(r.status, 403);
     assert.equal((JSON.parse(r.body) as { reason: string }).reason, 'untrusted-host');
+  });
+});
+
+describe('/todos —— 待办清单的完整往返', () => {
+  test('新建 → 列表 → 勾选 → 删除', async () => {
+    const create = await call('/dsh-pet-7340/todos', 'POST', JSON.stringify({ text: '交周报', dueAt: 1793000000000 }));
+    assert.equal(create.status, 200);
+    const created = JSON.parse(create.body) as { ok: boolean; todo: { id: string; text: string; dueAt: number } };
+    assert.equal(created.ok, true);
+    assert.equal(created.todo.text, '交周报');
+    assert.equal(created.todo.dueAt, 1793000000000);
+
+    const listed = JSON.parse((await call('/dsh-pet-7340/todos')).body) as { todos: Array<{ id: string }> };
+    assert.ok(
+      listed.todos.some((todo) => todo.id === created.todo.id),
+      '新建的待办必须出现在清单里',
+    );
+
+    const patched = JSON.parse(
+      (await call('/dsh-pet-7340/todos/' + created.todo.id, 'PATCH', JSON.stringify({ done: true }))).body,
+    ) as { ok: boolean; todo: { done: boolean } };
+    assert.equal(patched.ok, true);
+    assert.equal(patched.todo.done, true);
+
+    const removed = JSON.parse((await call('/dsh-pet-7340/todos/' + created.todo.id, 'DELETE')).body) as {
+      removed: number;
+    };
+    assert.equal(removed.removed, 1);
+    const after = JSON.parse((await call('/dsh-pet-7340/todos')).body) as { todos: Array<{ id: string }> };
+    assert.equal(
+      after.todos.some((todo) => todo.id === created.todo.id),
+      false,
+      '删除后不得再出现在清单里',
+    );
   });
 });

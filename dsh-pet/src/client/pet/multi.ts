@@ -18,6 +18,7 @@ import {
   readLock,
   readPosition,
   readSay,
+  readSleep,
   readThrow,
   readWorkStatus,
   resolveLeafPath,
@@ -34,6 +35,7 @@ import type {
   PositionMode,
   SayCue,
   SectionLeafName,
+  SleepState,
   StateLeaf,
 } from '../../shared/state.ts';
 import type { MenuMoreItem } from '../../shared/menu.ts';
@@ -42,6 +44,7 @@ import type { WorkStatusSnapshot } from '../../shared/work-status.ts';
 import type { PetCardProps } from './card/props.ts';
 import type { PetRuntime, RuntimePet } from './types.ts';
 import { setClickSoundEnabled } from './click-sound.ts';
+import { setSurface, setVoiceConfig } from '../../shared/voice.ts';
 import { runStatePoll } from './state-poll.ts';
 import { setMenuItems } from '../menu-service.ts';
 import { setStateSnapshot } from '../state-service.ts';
@@ -115,6 +118,10 @@ export function createPetMulti(
         }
         // 点击音效开关只读 main 条目，非 true 一律静音。
         setClickSoundEnabled(main.clickSoundEnabled === true);
+        // 本页就是网页端：按叶子播放时只认 voiceTo='web' 的那一句。
+        setSurface('web');
+        // 音色与总开关同源：缺字段即「不播」，不在端上兜默认值。
+        setVoiceConfig(main.voiceName, main.voiceEnabled);
         const flattened = flattenConfigPets(merged);
         petBridge.current = flattened;
         // 「添加宠物」模板取 main 条目的 pets[0]。
@@ -179,6 +186,9 @@ export function createPetMulti(
     // 占用锁是状态而不是指令：PetCard 读它决定冻结，并按 expiresAt 自行解除。
     const [lockTick, setLockTick] = useState(0);
     const lockRef = useRef<Record<string, LockState>>({});
+    // 睡觉同样是状态：三段名字由宿主挑定，卡片据此播开始→循环→起来。
+    const [sleepTick, setSleepTick] = useState(0);
+    const sleepRef = useRef<Record<string, SleepState>>({});
     // 第三方菜单项只在打开右键菜单时读一次，不参与渲染。
     const menuItemsRef = useRef<MenuMoreItem[]>([]);
     useEffect(() => {
@@ -264,6 +274,14 @@ export function createPetMulti(
             setLockTick((t) => t + 1);
             return;
           }
+          case 'sleep': {
+            // 睡觉也是状态：卡片按三段名字播「开始→循环→起来」，醒来后回随机链。
+            const hit = readSleep(leaf);
+            if (!hit) return;
+            sleepRef.current[petId] = hit;
+            setSleepTick((t) => t + 1);
+            return;
+          }
         }
       };
 
@@ -276,6 +294,13 @@ export function createPetMulti(
           // 菜单项是当前状态而不是事件，首拉也必须装上，否则刷新后第三方菜单会一直为空。
           menuItemsRef.current = readMenuItems(s.sections.menu?.data, 'web');
           setMenuItems(menuItemsRef.current);
+          // 睡觉同样是状态而不是事件：刷新页面时宿主仍记着它在睡，首拉必须补一次；
+          // 否则页面显示醒着，而宿主对「已在睡」不回写叶子，只能等宿主重启才恢复。
+          for (const [petId, entry] of Object.entries(s.pets)) {
+            const hit = entry?.sleep?.data == null ? null : readSleep(entry.sleep);
+            if (hit) sleepRef.current[petId] = hit;
+          }
+          setSleepTick((t) => t + 1);
           return;
         }
         for (const { path, leaf } of takeChanged(s, baseline)) {
@@ -325,6 +350,8 @@ export function createPetMulti(
             throwCueTick,
             lock: lockRef.current[p.id],
             lockTick,
+            sleep: sleepRef.current[p.id],
+            sleepTick,
             menuItemsRef,
             arena: arenaRef,
           }),

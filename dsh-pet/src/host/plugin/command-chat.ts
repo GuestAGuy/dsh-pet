@@ -4,6 +4,7 @@
  */
 import type { ChatMemory } from './chat-memory.ts';
 import type { BalancePoll } from './balance-poll.ts';
+import type { PetLookup } from './pet-lookup.ts';
 import type { HostSetup } from './setup.ts';
 import type { HostContext } from './context.ts';
 
@@ -14,11 +15,13 @@ export type CommandChatInput = {
 } & Pick<ChatMemory, 'chatWithPet'> &
   Pick<HostSetup, 'log'> &
   Pick<ChatMemory, 'publishWhisper'> &
+  Pick<PetLookup, 'sleep'> &
+  Pick<PetLookup, 'sleepRefusalText'> &
   Pick<BalancePoll, 'resolveActivePetId'>;
 
 /** 注册对话命令；返回的清理函数由 ctx.effect 收集。 */
 export function registerChatCommand(deps: CommandChatInput): void {
-  const { ctx, chatWithPet, log, publishWhisper, resolveActivePetId } = deps;
+  const { ctx, chatWithPet, log, publishWhisper, resolveActivePetId, sleep, sleepRefusalText } = deps;
   // /chat 斜杠命令：无参数 = 碎碎念一句（手动语义：不受 whisperEnabled 门控，那个字段只关自动
   // 周期）；有参数 = 正常对话（走 chatWithPet 同一条路径：记忆 + 人设 + 写盘）。
   // 两个分支都是 fire-and-forget：回执不等模型，文本一律写进 S 的 pets.<id>.say，前端轮询后弹气泡。
@@ -31,6 +34,8 @@ export function registerChatCommand(deps: CommandChatInput): void {
         handler: ({ rawInput }: { rawInput: string }) => {
           const petId = resolveActivePetId();
           if (!petId) return { kind: 'error', text: '没有可交互的桌宠' };
+          // 睡觉：命令也是「手动打扰」，回拒绝台词而不是叫模型（省一次调用，也符合睡着不说话的设定）
+          if (sleep.sleeping(petId)) return { kind: 'error', text: sleepRefusalText(petId) };
           const text = rawInput.trim();
           if (!text) {
             void publishWhisper(petId).catch((e: unknown) =>

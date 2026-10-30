@@ -6,6 +6,7 @@
  * @module dsh-pet/src/host/config/validate
  */
 import { FONT_SIZE_MAX, FONT_SIZE_MIN } from '../../shared/fonts.ts';
+import { isKnownVoice } from '../voice/voices.ts';
 import { FONT_FAMILY_SET } from './constants.ts';
 
 /** animations 段完整性校验（与旧 assertAnimationsHost 同一套规则；不 throw，非法返回 false） */
@@ -47,7 +48,28 @@ function animationsValid(a: unknown): boolean {
     }
   }
   const balance = evEntries.balance;
-  return Array.isArray(balance) && balance.length > 0;
+  if (!Array.isArray(balance) || balance.length === 0) return false;
+  // sleep 可选：pet pack 不写也合法（不同角色的睡觉素材不一样，不能强求）。
+  // 写了才校验形状——一个空套或空段会让状态机「进去了但没动画播」，比不配更难解释。
+  return anims.sleep === undefined || sleepValid(anims.sleep);
+}
+
+/** sleep 段校验：非空套数组，每套都必须有非空的 start / loop / end 字符串数组。
+ *  未写由调用方放行（可选字段）；这里只处理「写了」的形态。 */
+function sleepValid(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  for (const set of value) {
+    if (!set || typeof set !== 'object' || Array.isArray(set)) return false;
+    const entry = set as Record<string, unknown>;
+    for (const phase of ['start', 'loop', 'end']) {
+      const pool = entry[phase];
+      if (!Array.isArray(pool) || pool.length === 0) return false;
+      for (const name of pool) {
+        if (typeof name !== 'string' || name.length === 0) return false;
+      }
+    }
+  }
+  return true;
 }
 
 /** animationWeights 段校验（idle/turn/move 三个非负数字） */
@@ -62,7 +84,7 @@ function weightsValid(w: unknown): boolean {
 }
 
 /** physics 段校验：gravity ≥ 0（0 = 无重力，合法）、restitution ∈ [0,1]、groundFriction ≥ 0（均为有限数字）、
- *  ceilingBounce 为布尔、throwPower > 0（有限数字）、petCollision 为布尔 */
+ *  ceilingBounce / petCollision / hapticEnabled 为布尔、throwPower > 0（有限数字） */
 export function physicsValid(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const p = value as Record<string, unknown>;
@@ -81,7 +103,9 @@ export function physicsValid(value: unknown): boolean {
     typeof p.ceilingBounce === 'boolean' &&
     Number.isFinite(tp) &&
     tp > 0 &&
-    typeof p.petCollision === 'boolean'
+    typeof p.petCollision === 'boolean' &&
+    // 可选：旧配置（与手写配置）没有这个键，缺省即开启——缺键不算整段非法。
+    (p.hapticEnabled === undefined || typeof p.hapticEnabled === 'boolean')
   );
 }
 
@@ -140,7 +164,21 @@ export function topFieldValid(key: string, value: unknown): boolean {
       return typeof value === 'boolean';
     case 'whisperImageEnabled':
       return typeof value === 'boolean';
+    case 'voiceEnabled':
+      // 语音播报开关（全局布尔）：只决定念不念，不影响气泡与记忆
+      return typeof value === 'boolean';
+    case 'voiceName':
+      // 音色必须是白名单内的 id；写错即非法，读取侧回落到默认音色并告警
+      return typeof value === 'string' && isKnownVoice(value);
+    case 'voiceWhisperEnabled':
+      // 周期碎碎念的语音开关（全局布尔）：只决定念不念，不影响气泡与记忆
+      return typeof value === 'boolean';
+    case 'voiceTodoEnabled':
+      // 待办提醒的语音开关（全局布尔）：同上
+      return typeof value === 'boolean';
     case 'chatImageEnabled':
+      return typeof value === 'boolean';
+    case 'chatAnimationEnabled':
       return typeof value === 'boolean';
     case 'confineToScreen':
       return typeof value === 'boolean';
@@ -167,6 +205,13 @@ export function topFieldValid(key: string, value: unknown): boolean {
       return modelSelectionValid(value);
     case 'workStatusTexts':
       return workStatusTextsValid(value);
+    case 'sleepRefuseTexts':
+    case 'sleepStartTexts':
+    case 'sleepEndTexts': {
+      // 睡觉三组台词（条目级）：非空字符串数组，随机挑一句；空数组/空串会让「说话」变成静默失败
+      if (!Array.isArray(value) || value.length === 0) return false;
+      return value.every((text) => typeof text === 'string' && text.length > 0);
+    }
     default:
       return true;
   }

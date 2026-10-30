@@ -25,11 +25,14 @@ export type ResultReason =
   | 'lock-required'
   | 'locked'
   | 'method-not-allowed'
+  | 'no-sleep-animations'
   | 'payload-too-large'
   | 'pet-not-displayed'
   | 'pet-required'
   | 'pose-unavailable'
   | 'provider-missing'
+  | 'sleeping'
+  | 'todo-not-found'
   | 'too-many-items'
   | 'too-many-owners'
   | 'unknown-animation'
@@ -39,7 +42,8 @@ export type ResultReason =
   | 'unknown-pet'
   | 'unknown-playback'
   | 'unsupported'
-  | 'user-config-unparsable';
+  | 'user-config-unparsable'
+  | 'voice-busy';
 
 /** 失败实体：状态码不参与判断，200 与 4xx 共用这个形状。 */
 export interface FailureEntity {

@@ -22,7 +22,7 @@ import { createRequestSecurity } from '../standalone/request-security.ts';
 
 import { installDesktopAuth, type DesktopSession } from './desktop-auth.ts';
 import { startRouter } from './router.ts';
-import { ROUTE_PATH } from '../shared/constants.ts';
+import { ROUTE_SEGMENT } from '../shared/constants.ts';
 
 /**
  * `electron` 由 Electron 运行时提供，不是本包依赖；只声明实际用到的成员。
@@ -121,11 +121,12 @@ async function boot(): Promise<void> {
   // 先把「我自己就是应用」告诉插件，再 apply：apply 内部据此短路 spawn 与下载
   process.env.DSH_PET_IN_PROCESS = '1';
   process.env.DSH_PET_APP_MODE = '1';
-  process.env.DSH_PET_OPEN_TARGET = 'site';
+  // 独立模式点首项打开的是本机 AI 设置页，不是 DSH 站点：形态必须显式标成 standalone。
+  process.env.DSH_PET_OPEN_TARGET = 'standalone';
   // 不注入宿主 PID：helper 的「宿主没了就退出」只对双进程有意义，同进程里设了会自己杀自己
   delete process.env.DSH_PET_HOST_PID;
-  process.env.DSH_PET_CONFIG_URL = `${origin}${ROUTE_PATH}/config`;
-  // 右键「打开网站」用它：带令牌的配置页（与 CLI 行为一致）。裸 origin 在应用里没有页面可看。
+  process.env.DSH_PET_CONFIG_URL = `${origin}${ROUTE_SEGMENT}/config`;
+  // 右键「打开 AI 设置」用它：带令牌的配置页（与 CLI 行为一致）。裸 origin 在应用里没有页面可看。
   process.env.DSH_PET_SITE_URL = security.authenticatedUrl(origin);
   if (!process.env.DSH_PET_SCALE) process.env.DSH_PET_SCALE = '1';
 

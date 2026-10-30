@@ -11,6 +11,12 @@ import type { WorkStatusBridge } from './work-status-bridge.ts';
 import type { HostSetup } from './setup.ts';
 import type { HostContext } from './context.ts';
 
+/** 在途调用的键：宿主给的 `callId`；没有标识时用临时 `Symbol` 占位。 */
+export type ToolCallKey = string | symbol;
+
+/** 每会话在途调用的记账表：会话标识 → （调用键 → 气泡文案）。 */
+export type ToolCallLedger = Map<string, Map<ToolCallKey, string>>;
+
 /** 会话通知的输入：装配期对象与更早的工厂。 */
 export type SessionNotifyInput = {
   /** 宿主上下文（apply 收到的那一个）。 */
@@ -45,16 +51,16 @@ export function createSessionNotify(deps: SessionNotifyInput) {
   const lastTodoText = new Map<string, string | null>();
 
   /**
-   * 每会话「正在跑、且气泡上有具体描述」的工具数（不是布尔）：并行调用时先返回的那个不该把
-   * 仍在中途的另一个描述顶掉。只统计拿到了目标的调用——没写出描述就不该占位。
+   * 每会话最后一段回复文本：完成通知的正文靠它。排活动门定时器时取用即出队——活动门会把它延后
+   * 1.5s，但待确认期间文本不会再变；留到定时器里再删，遇到「判定还有活」提前返回就成了长期残留。
    */
-  const toolsInFlight = new Map<string, number>();
+  const lastReplyText = new Map<string, string>();
 
-  const bumpToolsInFlight = (sessionId: string, delta: number): void => {
-    const next = (toolsInFlight.get(sessionId) ?? 0) + delta;
-    if (next > 0) toolsInFlight.set(sessionId, next);
-    else toolsInFlight.delete(sessionId);
-  };
+  /**
+   * 每会话在途调用的详情：键为调用标识（缺标识时用临时 `Symbol`），值为气泡文案。
+   * 结果事件只删自己那一条，并行调用因此不会互相顶掉，全部删完才回落 todo 文案。
+   */
+  const toolsInFlight: ToolCallLedger = new Map();
 
   /** 取消某会话待执行的终态清理：会话已回到非终态，那次清理到点后既不清理也不重排，留着只会误导 */
   const cancelTerminalCleanup = (sessionId: string): void => {
@@ -110,6 +116,9 @@ export function createSessionNotify(deps: SessionNotifyInput) {
 
   /** 排一个活动门定时器：到点确认空闲才推这一帧 */
   const scheduleCompletionNotify = (sessionId: string, event: unknown): void => {
+    // 取用即出队：同一回合的 assistant/message 已经到齐，文本不会再变。
+    const replyText = lastReplyText.get(sessionId);
+    lastReplyText.delete(sessionId);
     const prev = notifyActivityTimers.get(sessionId);
     if (prev !== undefined) clearTimeout(prev);
     notifyActivityTimers.set(
@@ -118,7 +127,7 @@ export function createSessionNotify(deps: SessionNotifyInput) {
         notifyActivityTimers.delete(sessionId);
         void (async () => {
           if (await sessionHasRunningWork(sessionId)) return; // 还有活：等真正的收尾轮再弹
-          const frame = reduceNotifyFrame(event as Parameters<typeof reduceNotifyFrame>[0]);
+          const frame = reduceNotifyFrame(event as Parameters<typeof reduceNotifyFrame>[0], replyText);
           // 这条延迟路径（活动门等 1.5s 确认没活了才推的「对话完成」）最常被点，同样要带会话 id
           if (frame) pushNotifyFrame(withSessionId(frame, sessionId));
         })();
@@ -130,8 +139,8 @@ export function createSessionNotify(deps: SessionNotifyInput) {
     turnFlags,
     terminalTimers,
     lastTodoText,
+    lastReplyText,
     toolsInFlight,
-    bumpToolsInFlight,
     cancelTerminalCleanup,
     scheduleTerminalCleanup,
     notifyActivityTimers,

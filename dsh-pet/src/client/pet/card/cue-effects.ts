@@ -8,6 +8,7 @@
 import { balanceEventIndex, balancePercent } from '../../../shared/balance/index.ts';
 import { pickSlot, poolIncludes } from '../../../shared/pickers.ts';
 import { WORK_STATUS_INDEX } from '../../../shared/work-status.ts';
+import { playSayVoice } from '../../../shared/voice.ts';
 import type { CardHub } from './hub.ts';
 import type { PetCardProps } from './props.ts';
 import type * as ReactNS from 'react';
@@ -52,7 +53,8 @@ export function createCueEffects(rt: CueEffectsRuntime) {
     const prevPosRef = useRef(0);
     const prevThrowRef = useRef(0);
 
-    /** 余额事件：按档位播事件动画并弹气泡。手动请求无条件弹，自动轮询要求开启且有百分比。 */
+    /** 余额事件：按档位播事件动画并弹气泡。手动请求无条件弹，自动轮询要求开启且有百分比；
+     *  睡着时自动来源整拍丢弃，否则会顶掉睡姿。 */
     const consumeBalance = (): void => {
       const cfg = hub.cfg();
       const card = hub.card;
@@ -60,6 +62,8 @@ export function createCueEffects(rt: CueEffectsRuntime) {
       prevBalanceRef.current = balanceTick;
       // 占用锁：自动余额不看，手动请求照常；tick 消费之后再判，占用期间这一拍就当过去。
       if (hub.ownAnim.isFrozen() && !balanceManual) return;
+      // 睡觉：与工作状态、文字说明同一口径——不换动画也不弹气泡。手动请求到不了这里（路由层按睡拒）。
+      if (hub.sleeping() && !balanceManual) return;
       if (!balance || !balance.ok) return;
       if (!cfg.balanceEnabled && !balanceManual) return; // 自动轮询受开关门控，手动请求无条件通过。
       const percent = balancePercent(balance);
@@ -93,7 +97,7 @@ export function createCueEffects(rt: CueEffectsRuntime) {
       if (balanceNoticeTick === 0 || balanceNoticeTick === prevNoticeRef.current) return;
       prevNoticeRef.current = balanceNoticeTick;
       // 占用锁：自动来源不看，手动请求照常。
-      if (hub.ownAnim.isFrozen() && !balanceManual) return;
+      if ((hub.ownAnim.isFrozen() || hub.sleeping()) && !balanceManual) return;
       if (!balance || balance.ok) return;
       hub.bubbles.showBalance();
     };
@@ -108,6 +112,8 @@ export function createCueEffects(rt: CueEffectsRuntime) {
       // 占用锁：工作状态是自动来源，锁生效时不响应；解冻时由冻结驱动重新对齐当前状态。
       // 不挡宿主写入：sections.workStatus 是所有宠物共用一份，按宠物在渲染端忽略。
       if (hub.ownAnim.isFrozen()) return;
+      // 睡觉：同样不响应工作状态（不换动画、不弹文案）；醒来后由下一次状态变化重新对齐
+      if (hub.sleeping()) return;
       if (!workStatus || workStatus.state === null) {
         log('pet=' + cfg.id + ' ' + (prevWorkStateRef.current ?? 'null') + '->null    播完即停（回待机，收起气泡）');
         prevWorkStateRef.current = null;
@@ -159,6 +165,8 @@ export function createCueEffects(rt: CueEffectsRuntime) {
         return;
       }
       hub.speak(say.text, say.image, say.url, say.duration, say.anim);
+      // 两端各判各的：叶子点名了本端才念，没点名或点了另一端就只弹气泡
+      playSayVoice(say);
     };
 
     /** 点播动画：url 插播一段，名称走菜单同一套动作。 */

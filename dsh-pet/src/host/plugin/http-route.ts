@@ -6,7 +6,7 @@
  * @module dsh-pet/src/host/plugin/http-route
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ROUTE_PATH } from '../../shared/constants.ts';
+import { ROUTE_SEGMENT } from '../../shared/constants.ts';
 import { readBody, sendFile, sendJson, sendText, type RouteResult } from '../http.ts';
 import { failureBody } from '../routes/result.ts';
 import { judgeRequestOrigin } from '../request-guard.ts';
@@ -59,7 +59,7 @@ export function createHttpRoute(deps: PetRouteDeps): { handlePetRoute: HttpRoute
     signal?: AbortSignal,
   ): Promise<RouteResult> => {
     const url = new URL(rawUrl, 'http://localhost');
-    const rest = decodeURIComponent(url.pathname.slice(ROUTE_PATH.length + 1));
+    const rest = decodeURIComponent(url.pathname.slice(ROUTE_SEGMENT.length + 1));
     const run = (): Promise<RouteResult> => dispatchPetRoute(url, rest, method, body, signal);
     // 写配置的三条路径（PUT/POST /config、POST /pet-display、POST /pet-config）都是「读当前配置
     // → 白名单重建整段 pets → 写盘」，并发交错会互相覆盖，必须共用一条串行队列；
@@ -92,7 +92,7 @@ export function registerHttpRoute(ctx: HostContext, handlePetRoute: HttpRouteHan
     () =>
       ctx.webServer.register({
         kind: 'prefix',
-        path: ROUTE_PATH,
+        path: ROUTE_SEGMENT,
         handler: async (req: IncomingMessage, res: ServerResponse) => {
           // CSRF 防线（见 ../request-guard.ts）：浏览器跨站请求在**读 body 之前**拒绝。
           // 恶意页面能用「简单请求」（text/plain + JSON 正文）绕过 CORS 预检，却绕不过来源判定；
@@ -116,14 +116,16 @@ export function registerHttpRoute(ctx: HostContext, handlePetRoute: HttpRouteHan
           const onClose = (): void => abort.abort();
           res.on('close', onClose);
           try {
-            const body = req.method === 'PUT' || req.method === 'POST' ? await readBody(req) : undefined;
+            // PATCH 也带体（待办的部分更新）；GET / DELETE 不读，避免无谓地等一个不会来的结束事件。
+            const readsBody = req.method === 'PUT' || req.method === 'POST' || req.method === 'PATCH';
+            const body = readsBody ? await readBody(req) : undefined;
             const result = await handlePetRoute(req.url ?? '/', req.method ?? 'GET', body, abort.signal);
             res.off('close', onClose);
             if (result.kind === 'json') sendJson(res, result.status, result.obj, result.headers);
             else if (result.kind === 'text') sendText(res, result.status, result.body);
             else if (result.kind === 'none') {
               /* 调用方已断开：不再写（写了会抛） */
-            } else sendFile(res, result.file, result.contentType); // 非 async：流在 open 后自己 pipe，错误内部收口
+            } else sendFile(req, res, result.file, result.contentType); // 非 async：流在 open 后自己 pipe，错误内部收口
           } catch (e) {
             res.off('close', onClose);
             // 连接已断（挂起等待被中止后也可能撞上）→ 不再写，避免二次抛错
@@ -141,6 +143,6 @@ export function registerHttpRoute(ctx: HostContext, handlePetRoute: HttpRouteHan
           }
         },
       }),
-    'dsh-pet: /dsh-pet-7340 asset route',
+    `dsh-pet: ${ROUTE_SEGMENT} asset route`,
   );
 }

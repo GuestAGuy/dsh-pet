@@ -100,6 +100,8 @@ tags:
     description: 配置的读取、保存与元信息
   - name: Assets
     description: 字体、通知图标、表情包、动画素材
+  - name: Voice
+    description: 语音合成——参数校验、排队与缓存都在宿主，成功时直接返回 mp3 文件
 
 paths:
   /dsh-pet-7340/state:
@@ -339,11 +341,22 @@ paths:
           本端点返回 `{ ok: false, reason: 'generate-error' }`。
         - 若该宠物条目开启了 `whisperImageEnabled` 且表情包池非空，
           会随机抽一张配图，随文本一起写进叶子的 `image` 字段。
+        - 带 `?image=` 时改为**只用指定那一张**：不受 `whisperImageEnabled` 门控（手动点图是显式意图），
+          名称不在池内则返回 `unknown-image`，**不会静默换成另一张**。
         - 模型选择：条目配置的 `whisperModel` 优先；留空则跟随当前对话的模型。
           指定模型生成失败时会**自动回落到当前对话的模型**重试一次。
       parameters:
         - $ref: "#/components/parameters/PetIdQuery"
         - $ref: "#/components/parameters/SurfaceQuery"
+        - name: image
+          in: query
+          required: false
+          description: |
+            指定本次使用的表情包名称（= 该宠物所属条目 `memes` 的键，不含扩展名）。
+            给了就只用这张；不在池内（名称写错，或图片文件已被删除）返回 `unknown-image`。
+            缺省 = 按 `whisperImageEnabled` 随机抽一张，或纯文本。
+          schema:
+            type: string
       responses:
         "200":
           description: |
@@ -353,7 +366,8 @@ paths:
             `reason` 取值：`provider-missing`（没有可用的模型——独立模式下恒为它）、
             `generate-error`（生成失败或 IO 失败，带 `message`）、`unknown-pet`（目标宠物在
             "校验那次读"与生成前那次读之间被删掉了——罕见，但如实报，**不会静默按 `main` 生成**，
-            也不会写下一只已不存在宠物的叶子）、`bad-request`（`surface` 缺省 / 非法）、
+            也不会写下一只已不存在宠物的叶子）、`unknown-image`（`?image=` 指定的名称不在池内）、
+            `bad-request`（`surface` 缺省 / 非法）、
             `pet-not-displayed`（带 `display`）。
           content:
             application/json:
@@ -933,6 +947,9 @@ paths:
         （`/anim`、`/broadcast`、`/position`、`/throw`、`/bubble/clear`）必须带 `?lock=<lockId>`，
         宠物自己的随机动画 / 自主走位 / 自动碎碎念 / 自动余额 / 工作状态表现全部让路。
 
+        **取锁会先把睡着的宠物叫醒**（锁 = 第三方接管）：`pets.<id>.sleep` 立刻写回 `sleeping: false`，
+        渲染端播一遍「起来」后进入正常动画链；占用期间再次 `POST /sleep` 会回 `locked`。
+
         **取锁会打断正在播的那一次点播**：那一刻前台动画会被暂停，而**解冻不会把它接回来**
         （解冻走的是回 idle / 恢复档位，等于换源顶掉它），所以它确实不会再播完——回执如实报
         `cancelled` + `reason: frozen`，而不是一直挂着 `playing` 让挂 `?wait=ended` 的调用方白等
@@ -1110,6 +1127,66 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+  /dsh-pet-7340/sleep:
+    post:
+      tags: [Action]
+      operationId: putPetToSleep
+      summary: 让桌宠睡下（宿主挑一整套睡觉动画写进叶子）
+      description: |
+        进入睡觉状态。宿主从该条目 `animations.sleep` 里**整套随机**挑一套，三段再各自在候选里
+        随机挑一个，写进 `pets.<id>.sleep` 并随响应回三段名字；渲染端据此播「开始（一次）→
+        循环（无限）」。叫醒走 `POST /wake`，或由用户点击宠物触发。
+
+        睡着期间：宿主跳过自动来源（碎碎念 / 余额 / 待办提醒），并拒绝手动端点（`anim` / `whisper`
+        / `chat` / `balance` / `broadcast` / `bubble/clear` / `menu/click`），拒绝时回
+        `reason: sleeping` 并弹一句条目级 `sleepRefuseTexts` 里的台词。**持锁时让路**：
+        带 `lock=` 的调用不受睡觉限制（锁的语义就是把控制权交给第三方）。
+
+        **幂等**：已经在睡时保持原套、不重播动画，仍回 `ok: true`（`changed: false`）。
+        该条目没配 `animations.sleep` → `ok: false` + `reason: no-sleep-animations`。
+      parameters:
+        - $ref: "#/components/parameters/PetIdQuery"
+        - $ref: "#/components/parameters/LockQuery"
+      responses:
+        "200":
+          description: |
+            恒为 200（除 405）。成功带 `sleeping: true` 与本次选中的 `start` / `loop` / `end`；
+            失败通过 `ok: false` 表达，`reason` 可能是 `bad-request`、`pet-required`、`unknown-pet`、
+            `locked` / `lock-required` / `lock-lost`（占用门禁）、`no-sleep-animations`。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/OkResponse"
+                  - $ref: "#/components/schemas/FailureResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+  /dsh-pet-7340/wake:
+    post:
+      tags: [Action]
+      summary: 叫醒睡着的桌宠
+      operationId: wakePet
+      description: |
+        退出睡觉状态：宿主写 `pets.<id>.sleep = { sleeping: false }`，渲染端播「起来（一次）」后
+        回随机链。**幂等**：本来没睡也回 `ok: true`（`changed: false`）。
+      parameters:
+        - $ref: "#/components/parameters/PetIdQuery"
+        - $ref: "#/components/parameters/LockQuery"
+      responses:
+        "200":
+          description: |
+            恒为 200（除 405）。成功带 `sleeping: false` 与 `changed`（本次是否真的醒来）；
+            失败通过 `ok: false` 表达，`reason` 可能是 `pet-required`、`unknown-pet` 或占用门禁那三个。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/OkResponse"
+                  - $ref: "#/components/schemas/FailureResponse"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
 
@@ -1519,8 +1596,15 @@ paths:
         - 文本超过 **2000 字** → `{ ok: false, reason: 'bad-request' }`。
         - 模型选择：条目配置的 `chatModel` 优先；留空则跟随当前对话的模型。
           指定模型生成失败时会**自动回落到当前对话的模型**重试一次。
-        - 记忆会记下本轮的图片引用与配图名（供聊天记录展示），但历史回放**只带正文**：
-          图信息不进上下文，否则每轮都会把旧图重发一遍给模型。
+        - 记忆会记下本轮的图片引用、配图名与动作名（供聊天记录展示），但历史回放**只带正文**：
+          图信息与动作标记都不进上下文，否则每轮都会把旧图 / 旧动作重发一遍给模型。
+        - **对话动作联动**（配置 `chatAnimationEnabled`，默认开）：开启时把
+          `animations.categories` 下的动作清单附进提示词，模型在语境贴合时于回复末尾写
+          `[动作:名称]`。采纳后与 `POST /anim` 走**同一条写回链路**：先写
+          `pets.<id>.anim`（`name` + `playbackId`），再写 `pets.<id>.say`（带 `anim: false`，
+          气泡不联动碎碎念动画，也不会把刚点播的动作顶掉）；标记会从气泡正文与记忆里剥掉。
+          模型只写标记没有正文时只演动作、不弹气泡。与配图开关相互独立：两者可同时生效、
+          也可只开一个。
       parameters:
         - $ref: "#/components/parameters/PetIdQuery"
         - $ref: "#/components/parameters/SurfaceQuery"
@@ -1635,6 +1719,79 @@ paths:
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
 
+  /dsh-pet-7340/chat/memory:
+    get:
+      tags: [Action]
+      operationId: listOrphanChatMemory
+      summary: 列出已删宠物残留的对话历史
+      description: |
+        宠物从配置里删掉后，`memory.json` 里它的历史仍会保留；这类分桶既不在 `GET /chat` 的
+        可达范围（那里要求宠物存在），也不会自己消失。这个端点把它们列出来，**只给条数与最后时间，
+        不返回正文**。
+      responses:
+        "200":
+          description: |
+            恒为 200。成功 `{ ok: true, orphans }`；读取失败是 `{ ok: false, reason: 'generate-error' }`。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [ok, orphans]
+                    properties:
+                      ok:
+                        type: boolean
+                        const: true
+                      orphans:
+                        type: array
+                        description: 每个残留分桶一条；没有残留时为空数组
+                        items:
+                          type: object
+                          required: [entry, petId, messages, lastTs]
+                          properties:
+                            entry:
+                              type: string
+                              description: 所属条目（素材根）
+                            petId:
+                              type: string
+                            messages:
+                              type: integer
+                              description: 该分桶残留的消息条数
+                            lastTs:
+                              type: integer
+                              format: int64
+                              description: 最后一条消息的时间戳（毫秒）；没有消息时为 0
+                  - $ref: "#/components/schemas/FailureResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+    delete:
+      tags: [Action]
+      operationId: clearOrphanChatMemory
+      summary: 清空已删宠物残留的对话历史
+      description: 一次清掉所有「配置里已不存在、但记忆里还有」的分桶，**不可撤销**。
+      responses:
+        "200":
+          description: |
+            恒为 200。成功 `{ ok: true, pets, messages }`（删掉的宠物数与消息条数，没有残留时都是 0）；
+            失败是 `{ ok: false, reason: 'generate-error' }`。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [ok, pets, messages]
+                    properties:
+                      ok:
+                        type: boolean
+                        const: true
+                      pets:
+                        type: integer
+                      messages:
+                        type: integer
+                  - $ref: "#/components/schemas/FailureResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
   /dsh-pet-7340/config:
     get:
       tags: [Config]
@@ -1679,10 +1836,12 @@ paths:
 
         有以下几点必须知道：
 
-        - **只白名单字段会被保留**：`pets[]` 的 `id`/`name`/`size`/`balanceEnabled`/
+        - **只白名单字段会被保留**：`pets[]` 的 `id`/`name`/`size`/`sizePercent`/`balanceEnabled`/
           `whisperEnabled`/`workStatusEnabled`/`fixedEnabled`/`display`/`position`，以及顶层
-          `notificationsEnabled`/`whisperImageEnabled`/`chatImageEnabled`/`confineToScreen`/
-          `physics`/`whisperModel`/`chatModel`/`chatMemoryRounds`/`chatImageLimit`。
+          `notificationsEnabled`/`clickSoundEnabled`/`whisperImageEnabled`/`chatImageEnabled`/
+          `chatAnimationEnabled`/`confineToScreen`/`trayEnabled`/`voiceEnabled`/`voiceName`/`voiceWhisperEnabled`/
+          `voiceTodoEnabled`/`physics`/`font`/`whisperModel`/`chatModel`/`chatMemoryRounds`/
+          `chatImageLimit`。
           其余字段会沿用磁盘上用户文件里的原值（透传保留），所以设置页保存
           **不会抹掉**你手写的精调配置（`whisperPrompt`/`memes`/`eventsRefreshSec` 等）。
           白名单字段也只在请求体**真的传了**时才算白名单：没传就走透传，不会被抹成默认值。
@@ -1862,7 +2021,7 @@ paths:
         必须知道的几点：
 
         - **整段替换**：`pets` 必须是该条目的**全部实例**，漏传一只等于把它删掉。
-        - **白名单重建 + 透传保留**：实例只保留 `id`/`name`/`size`/`balanceEnabled`/
+        - **白名单重建 + 透传保留**：实例只保留 `id`/`name`/`size`/`sizePercent`/`balanceEnabled`/
           `whisperEnabled`/`workStatusEnabled`/`fixedEnabled`/`display`/`position`/`whisperPrompt`；
           该文件顶层的 `animations`/`animationWeights`/`whisperPrompt`/`memes` 等原样保留。
         - **不接受全局字段**：`notificationsEnabled`/`physics`/`font`/`whisperModel` 等即使传了
@@ -1961,6 +2120,11 @@ paths:
                   animations:
                     type: string
                     description: 用户动画素材根目录绝对路径
+                  todos:
+                    type: string
+                    description: |
+                      待办数据文件绝对路径（`$DSH_HOME/dsh-pet/todos.json`）。
+                      一份用户级数据、不分宠物：清单正文、到期时间与完成状态都在这里，删掉等于清空待办。
                   logs:
                     type: string
                     description: |
@@ -2150,6 +2314,128 @@ paths:
             text/plain:
               schema:
                 type: string
+
+  /dsh-pet-7340/voice/speak:
+    post:
+      tags: [Voice]
+      operationId: synthesizeVoice
+      summary: 合成一段语音
+      description: |
+        把一段中文文本合成为 mp3，成功时直接返回文件本体。
+
+        - **合成源可被第三方覆盖**：宿主插件可经 Cordis 服务 `petApi7340.voice.register`
+          注册自己的实现；注册后本端点改走该实现，未注册时走内置实现。两边返回的都是 mp3，
+          调用方无需区分。
+        - 覆盖期间 `voice` 参数不生效（音色由第三方实现自己决定），但校验口径不变：
+          非法值仍按 `bad-request` 拒绝。
+        - 第三方实现必须返回 mp3 字节；返回其它格式浏览器播不出来，空字节按 `generate-error` 处理。
+        - 同一「来源 + 音色 + 语速 + 文本」只会合成一次，命中缓存时不再联网；来源即内置实现
+          或第三方 id，因此切换实现后不会命中旧音频。
+        - 合成串行执行，同时最多排队 3 个；超出返回 `voice-busy`，调用方可稍后重试。
+        - 参数问题、队列满、上游失败都是业务失败：HTTP 200 + `{ ok: false, reason, message }`。
+        只有请求体不是合法 JSON 才是 400，方法不对是 405。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  description: 待合成文本；trim 后不得为空，长度上限 500 个 UTF-16 字符。
+                  maxLength: 500
+                voice:
+                  type: string
+                  description: 音色 id，必须来自 `/voice/voices`；缺省 `zh-CN-XiaoxiaoNeural`。
+                rate:
+                  type: string
+                  description: prosody 语速表达式，如 `+0%` / `-10%`；允许 -50%..+100%，缺省 `+0%`。
+                  pattern: "^[+-][0-9]{1,3}%$"
+      responses:
+        "200":
+          description: |
+            成功时是 mp3 音频；失败时是 JSON `{ ok: false, reason, message }`，
+            reason 取值 `bad-request`（参数非法）/ `voice-busy`（队列已满）/ `generate-error`（上游失败或超时）。
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: object
+                required: [ok, reason, message]
+                properties:
+                  ok:
+                    type: boolean
+                    const: false
+                  reason:
+                    type: string
+                  message:
+                    type: string
+        "400":
+          description: 请求体不是合法 JSON。
+        "405":
+          description: 方法不是 POST。
+
+  /dsh-pet-7340/voice/voices:
+    get:
+      tags: [Voice]
+      operationId: getVoices
+      summary: 列出可用音色
+      description: 与 `/voice/speak` 的白名单同源；前端据此渲染音色选择器，不要硬编码 id。
+      responses:
+        "200":
+          description: 音色列表。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, voices]
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+                  voices:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, tag, default]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        tag:
+                          type: string
+                        default:
+                          type: boolean
+        "405":
+          description: 方法不是 GET。
+
+  /dsh-pet-7340/logo:
+    get:
+      tags: [Assets]
+      operationId: getLogo
+      summary: 获取插件 logo
+      description: |
+        包内 `assets/logo.png`。只放行这一个文件——`assets/` 根下还有配置文件，不开放成静态目录，
+        所以路径不接受额外段（多一段是 400）。对话面板用它当宠物头像。
+      responses:
+        "200":
+          description: PNG 图片
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: 路径带了额外段（`text/plain`）。
+        "404":
+          description: 包内没有 logo（安装损坏，`text/plain`）。
 
   "/dsh-pet-7340/sound/{file}":
     get:
@@ -2467,6 +2753,135 @@ paths:
         "405":
           description: 方法不允许（只接受 POST）
 
+  /dsh-pet-7340/todos:
+    get:
+      tags: [Action]
+      operationId: listTodos
+      summary: 读取待办清单
+      description: |
+        返回全部待办，已按「未完成在前、到期越近越靠前、无期限垫底、已完成最后」排序。
+        数据落在插件的用户目录（`<DSH_HOME>/dsh-pet/todos.json`），浏览器端与桌面端共用同一份。
+
+        **提醒由宿主定时器驱动，不依赖页面是否打开**：距到期越近提醒越密——
+        进入 7 天内开始提醒（24h → 12h → 4h → 1h → 20m → 5m 逐级变密），
+        逾期后 1 天内每 30 分钟、一周内每 6 小时，再久不再打扰。
+        一次提醒只由一只可见桌宠说出（网页端可见的优先），写进 `pets.<id>.say`。
+        没有端在线（没有挂着长轮询的请求）时整拍跳过，等有端连上再补上这次提醒。
+      responses:
+        "200":
+          description: 待办清单
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodoListResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+    post:
+      tags: [Action]
+      operationId: createTodo
+      summary: 新建一条待办
+      description: |
+        `text` 必填（trim 后 1–200 个码点）；`dueAt` 可选，epoch 毫秒或 `null`（无期限）。
+        没有期限的待办不会触发提醒，但仍会出现在清单里。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 200
+                  example: 交周报
+                dueAt:
+                  type: [integer, "null"]
+                  description: 到期时刻（epoch ms）；`null` / 不传 = 无期限
+                  example: 1793000000000
+      responses:
+        "200":
+          description: '新建结果；正文为空 / 超长或 `dueAt` 非法时回 `ok: false` + `bad-request`'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/TodoResponse"
+                  - $ref: "#/components/schemas/FailureResponse"
+        "400":
+          description: '请求体不是 JSON 对象：`400` + `{"ok":false,"reason":"invalid-json"}`'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureResponse"
+        "413":
+          description: '请求体超过 16 KiB：`413` + `{"ok":false,"reason":"payload-too-large"}`'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+  /dsh-pet-7340/todos/{id}:
+    patch:
+      tags: [Action]
+      operationId: updateTodo
+      summary: 修改一条待办
+      description: |
+        只写请求体里出现的字段，`text` / `dueAt` / `done` 至少要给一个（空对象回 `bad-request`）。
+        勾选完成会记 `completedAt`；**重新打开或改期限都会清空提醒排期**，按新状态重新计时。
+      parameters:
+        - $ref: "#/components/parameters/TodoIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  maxLength: 200
+                dueAt:
+                  type: [integer, "null"]
+                done:
+                  type: boolean
+      responses:
+        "200":
+          description: |
+            更新结果。id 不存在时回 `ok: false` + `todo-not-found`；字段非法回 `bad-request`。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/TodoResponse"
+                  - $ref: "#/components/schemas/FailureResponse"
+        "400":
+          description: '请求体不是 JSON 对象：`400` + `{"ok":false,"reason":"invalid-json"}`'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+    delete:
+      tags: [Action]
+      operationId: deleteTodo
+      summary: 删除一条待办
+      description: '幂等：id 不存在也回 `ok: true`，`removed: 0`。'
+      parameters:
+        - $ref: "#/components/parameters/TodoIdPath"
+      responses:
+        "200":
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodoRemovedResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
 components:
   parameters:
     PetIdQuery:
@@ -2547,6 +2962,15 @@ components:
         通知图标为 `<名>.png`。
       schema:
         type: string
+
+    TodoIdPath:
+      name: id
+      in: path
+      required: true
+      description: 待办 id（`GET /todos` 返回的 `todos[].id`）；只接受 URL 安全字符。
+      schema:
+        type: string
+      example: todo-mfh2k1-1
 
   responses:
     MethodNotAllowed:
@@ -2635,6 +3059,8 @@ components:
               unknown-animation,
               unknown-owner,
               unknown-playback,
+              sleeping,
+              no-sleep-animations,
               locked,
               lock-required,
               lock-lost,
@@ -2708,7 +3134,7 @@ components:
             所以它确实不会再播完，是"打断"而不是"暂停"）。
         matched:
           type: boolean
-          description: '`true` = 等到了 `wait` 里的状态；`false` = 超时返回'
+          description: "`true` = 等到了 `wait` 里的状态；`false` = 超时返回"
 
     PollState:
       type: object
@@ -2744,7 +3170,7 @@ components:
           description: 每只宠物各自一份；键是宠物 id（**可含点号，勿切分**）
           additionalProperties:
             type: object
-            required: [say, anim, position, throw, lock]
+            required: [say, anim, position, throw, lock, sleep]
             properties:
               say:
                 $ref: "#/components/schemas/SayLeaf"
@@ -2756,6 +3182,8 @@ components:
                 $ref: "#/components/schemas/ThrowLeaf"
               lock:
                 $ref: "#/components/schemas/LockLeaf"
+              sleep:
+                $ref: "#/components/schemas/SleepLeaf"
       examples:
         typical:
           summary: 一只有余额与碎碎念的宠物
@@ -2882,6 +3310,30 @@ components:
         monthlyCapUsd:
           type: number
           description: commandcode：月窗口满额度（USD）= 当期消耗 + 剩余额度；无额度也无消耗时缺省
+        usage:
+          type: object
+          description: |
+            windows：区间累计用量（本期累计），目前仅 commandcode 回传。
+            服务商给不出时整个字段缺省，气泡也就只有两页。
+            tokens 是毛值——接口不提供缓存命中拆分；requests 与 tokens 来自批量聚合，
+            可能比窗口百分比滞后数分钟。
+          required: [totalTokens, inputTokens, outputTokens, requests, spentUsd]
+          properties:
+            totalTokens:
+              type: integer
+              description: 区间总 token
+            inputTokens:
+              type: integer
+              description: 毛输入 token（含缓存命中部分，接口不给拆分）
+            outputTokens:
+              type: integer
+              description: 输出 token
+            requests:
+              type: integer
+              description: 区间请求数（含失败请求）
+            spentUsd:
+              type: number
+              description: 区间花费（USD）
         wallets:
           type: array
           description: |
@@ -3264,6 +3716,62 @@ components:
             - $ref: "#/components/schemas/SayClear"
             - type: "null"
 
+    SleepLeaf:
+      type: object
+      required: [counter, data]
+      properties:
+        counter:
+          $ref: "#/components/schemas/Counter"
+        data:
+          description: |
+            该宠物的**睡觉状态**；`null` = 从未写过（视为醒着）。由 `POST /sleep` / `POST /wake` 写入。
+
+            **三段动画名由宿主挑定后一起写进叶子**（外层整套随机、段内再随机），渲染端照此播
+            「开始（一次）→ 循环（无限）→ 起来（一次）」，不自己重新挑——否则两端会播到不同的一套。
+
+            **这是状态不是指令**：渲染端读它决定「要不要睡」。睡着时随机链、自动来源（碎碎念 /
+            余额 / 工作状态 / 待办提醒）与手动触发（说话 / 聊天 / 点播动画）一律按睡觉处理；
+            可拖拽但保持睡姿。宿主侧同样据此跳过自动循环并拒绝接口。
+          oneOf:
+            - $ref: "#/components/schemas/SleepState"
+            - type: "null"
+
+    SleepState:
+      description: 睡觉状态的两种形态，由 `sleeping` 字段区分。
+      oneOf:
+        - $ref: "#/components/schemas/SleepOn"
+        - $ref: "#/components/schemas/SleepOff"
+
+    SleepOn:
+      type: object
+      required: [sleeping, start, loop, end]
+      description: 正在睡：三段动画名由宿主选定。
+      properties:
+        sleeping:
+          type: boolean
+          const: true
+        start:
+          type: string
+          description: 入睡过渡（播一次）。
+          example: 睡觉-开始
+        loop:
+          type: string
+          description: 睡眠循环（无限播，不触发 ended）。
+          example: 睡觉-循环
+        end:
+          type: string
+          description: 醒来过渡（播一次）；播完回随机链。
+          example: 睡觉-起来
+
+    SleepOff:
+      type: object
+      required: [sleeping]
+      description: 醒着（含刚被叫醒）。
+      properties:
+        sleeping:
+          type: boolean
+          const: false
+
     LockLeaf:
       type: object
       required: [counter, data]
@@ -3355,6 +3863,16 @@ components:
             显式 `false` = 只弹气泡，不查动画池、不换源。
             同样只有 `POST /broadcast` 会写；碎碎念与对话回复不写。
           example: true
+        voiceTo:
+          type: string
+          enum: [web, desktop]
+          description: |
+            **这一句该由哪一端念**。两条取值规则：
+            路由上带 `?surface=` 的（`POST /whisper`、`POST /broadcast`）用请求面——`surface=web` / `desktop`
+            原样落地，`both` / `any` 不足以指定一端，退回第二条；其余来源（周期碎碎念、待办提醒、对话回复、
+            `/chat` 命令）按 `display` 推导：含 `desktop` 就写 `desktop`，只在网页显示才写 `web`——
+            桌面端只要 helper 在跑就一定有窗口，网页端随时可能被关掉。
+            缺省 = 谁都不念。消费端按自己所在的一端比对：不匹配就只弹气泡、不出声；同一端有多个页面时各自比对。
 
     SayClear:
       type: object
@@ -3390,7 +3908,7 @@ components:
           enum: [user, assistant]
         content:
           type: string
-          description: 消息正文（不含配图标记）
+          description: 消息正文（不含配图 / 动作标记）
         ts:
           type: integer
           format: int64
@@ -3420,6 +3938,11 @@ components:
           description: |
             该轮 AI 配的表情包名称（配置 memes 的键），只出现在 assistant 消息里；缺失 = 没配图。
             名称可按 `/pic/memes/<素材根>/<名称>.png` 还原成图；只供记录展示，不进上下文。
+        action:
+          type: string
+          description: |
+            该轮 AI 表演的动作名（`animations.categories` 内的名字），只出现在 assistant 消息里；
+            缺失 = 这一轮没有演动作。与 `meme` 同类：只供聊天记录展示，不进上下文。
 
     Provider:
       type: object
@@ -3495,6 +4018,16 @@ components:
           type: number
           exclusiveMinimum: 0
           description: 宠物尺寸（像素）
+        sizePercent:
+          type: number
+          minimum: 1
+          default: 100
+          description: |
+            屏幕宽度上限（%，默认 100，不设上限）。按人物本体占屏宽换算画框，`size` 仍是画框上限：
+            100 ≈ 不限制（宽窗口下与按 px 显示一致）；填 30–50 可让手机竖屏明显变小，
+            填 150 人物会比屏还宽，但画框仍被 `size` 夹住。
+            只在页面加载时解析一次，改窗口大小后需刷新。
+            仅作用于浏览器半侧；桌面透明窗始终用 `size`。小于 1 或非数字回落到 100。
         balanceEnabled:
           type: boolean
         whisperEnabled:
@@ -3530,8 +4063,23 @@ components:
           type: boolean
         chatImageEnabled:
           type: boolean
+        chatAnimationEnabled:
+          type: boolean
+          description: |
+            对话动作联动开关（全局默认）：开启后对话时把 `animations.categories` 下的全部动作清单交给模型，
+            由模型在语境贴合时挑一个当场表演；关掉则纯文字。设置页「全局开关」卡里的「对话动作联动」写的就是它。
         confineToScreen:
           type: boolean
+        voiceWhisperEnabled:
+          type: boolean
+          description: |
+            周期碎碎念要不要念出来（全局默认）。受 `voiceEnabled` 总开关约束：总开关关掉时本项不生效。
+            设置页「语音播报」卡里的「碎碎念播报」开关写的就是它。缺失默认 `false`。
+        voiceTodoEnabled:
+          type: boolean
+          description: |
+            待办提醒要不要念出来（全局默认）。同样受 `voiceEnabled` 总开关约束。
+            设置页「语音播报」卡里的「待办播报」开关写的就是它。缺失默认 `false`。
         chatMemoryRounds:
           type: integer
           minimum: 0
@@ -3591,6 +4139,9 @@ components:
           type: boolean
         chatImageEnabled:
           type: boolean
+        chatAnimationEnabled:
+          type: boolean
+          description: 对话动作联动开关（开启后模型可从 categories 的动作里挑一个当场表演）
         chatImageLimit:
           type: integer
           minimum: 0
@@ -3618,3 +4169,65 @@ components:
               default: 300
               description: 周期碎碎念间隔
       additionalProperties: true
+
+    Todo:
+      type: object
+      required: [id, text, dueAt, done, createdAt, updatedAt, completedAt]
+      properties:
+        id:
+          type: string
+          description: 实例内唯一；PATCH / DELETE 的路径段
+        text:
+          type: string
+          description: 正文（trim 后 1–200 个码点）
+        dueAt:
+          type: [integer, "null"]
+          description: 到期时刻（epoch ms）；null = 无期限，永不提醒
+        done:
+          type: boolean
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+        completedAt:
+          type: [integer, "null"]
+        lastRemindedAt:
+          type: [integer, "null"]
+          description: 上次提醒时刻；内部字段，前端面板不消费
+
+    TodoListResponse:
+      type: object
+      required: [ok, todos]
+      properties:
+        ok:
+          type: boolean
+        todos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Todo"
+
+    TodoResponse:
+      type: object
+      required: [ok, todo]
+      properties:
+        ok:
+          type: boolean
+        todo:
+          $ref: "#/components/schemas/Todo"
+        reason:
+          type: string
+          description: '失败原因（如 `bad-request` / `todo-not-found`）'
+        message:
+          type: string
+
+    TodoRemovedResponse:
+      type: object
+      required: [ok, removed]
+      properties:
+        ok:
+          type: boolean
+        removed:
+          type: integer
+          description: 删掉的条数；0 = 本来就没有（幂等）
+
+

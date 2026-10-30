@@ -10,10 +10,11 @@ import { readPose } from './pose.ts';
 import { readProgress } from './progress.ts';
 import { takeMenuEvents } from './menu-service.ts';
 import { getStateSnapshot } from './state-service.ts';
-import { makePetConfigSection, NS, zh, en, petBridge } from './settings.ts';
+import { dicts, makePetConfigSection, NS, petBridge } from './settings.ts';
 import { initNotify } from './notify.ts';
 import { installCommandFaces, type CommandFace, type CommandUiLike } from './command-faces.ts';
 import { installSectionNavIcon } from './nav-icon.ts';
+import { registerPetChatTab } from './chat/register.ts';
 import type * as ReactNS from 'react';
 import type * as PrimitivesNS from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -67,7 +68,7 @@ export function makeFactory(): (require: (mod: string) => any) => any {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DSH 注入的 ctx（locale/slots/webServer 等 service 无静态类型）
     function apply(ctx: any) {
       // 设置页文案字典。
-      ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-pet: dictionaries');
+      ctx.effect(() => ctx.locale.register(NS, dicts), 'dsh-pet: dictionaries');
       const t = ctx.locale.bind(NS);
 
       // 同页第三方插件可通过 Cordis 服务 petApi7340 读取本页宠物的实况、播放进度、最近一拍状态与菜单点击。
@@ -88,6 +89,13 @@ export function makeFactory(): (require: (mod: string) => any) => any {
             // 惰性取服务：它可能晚于本插件注册；缺失时退化为只把窗口叫回前台。
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DSH 注入服务无静态类型
             openSession: (sessionId: string) => (ctx as any).get?.('uiWorkspace')?.openSession?.(sessionId),
+            // 通知标题用会话名：会话列表里那一行的 title；空白会话 / 未命名会话取到空串就返回 undefined。
+            sessionTitle: (sessionId: string) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DSH 注入服务无静态类型
+              const row = (ctx as any).get?.('sessions')?.list?.getSnapshot?.()?.byId?.[sessionId];
+              const name = typeof row?.title === 'string' ? row.title.trim() : '';
+              return name || undefined;
+            },
           }),
         'dsh-pet: notifications',
       );
@@ -172,6 +180,32 @@ export function makeFactory(): (require: (mod: string) => any) => any {
           PetConfigSection,
         );
       });
+
+      // 右侧栏「桌宠对话」：可选能力，服务缺失时只告警，不影响其它部位。
+      // 确认弹窗用平台原语（primitives 缺失时面板内部退化为内联确认条）。
+      // 整体再兜一层：任何注册异常都不许拖垮插件激活（否则整个 Web 端进不去）。
+      ctx.effect(() => {
+        try {
+          return registerPetChatTab(ctx, {
+            h,
+            useEffect,
+            useRef,
+            useState,
+            ...(primitives === undefined
+              ? {}
+              : {
+                  ui: {
+                    Modal: primitives.Modal,
+                    Button: primitives.Button,
+                    ImageLightbox: primitives.ImageLightbox,
+                  },
+                }),
+          });
+        } catch (error) {
+          console.error('[dsh-pet] 右侧栏对话面板注册失败（已忽略，不影响启动）：', error);
+          return () => {};
+        }
+      }, 'dsh-pet: sidebar chat tab');
     }
 
     module.exports = { apply, inject, name };

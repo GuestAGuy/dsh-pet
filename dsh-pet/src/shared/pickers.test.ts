@@ -10,7 +10,38 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { isEventAnim, nextWorkStatusAnim, pickSlot, poolIncludes, rollKind, slotIncludes } from './pickers.ts';
+import {
+  isEventAnim,
+  nextWorkStatusAnim,
+  pickSleepSet,
+  pickSlot,
+  poolIncludes,
+  rollKind,
+  slotIncludes,
+} from './pickers.ts';
+
+describe('pickSleepSet —— 睡觉动作整套随机', () => {
+  const sets = [
+    { start: ['蹲-开始'], loop: ['蹲-循环'], end: ['蹲-起来'] },
+    { start: ['趴-开始'], loop: ['趴-循环'], end: ['趴-起来'] },
+  ];
+
+  test('抽到的是完整一套：start/loop/end 同源，不会跨套拼', () => {
+    const saved = Math.random;
+    try {
+      Math.random = () => 0;
+      assert.deepEqual(pickSleepSet(sets), sets[0]);
+      Math.random = () => 0.999;
+      assert.deepEqual(pickSleepSet(sets), sets[1]);
+    } finally {
+      Math.random = saved;
+    }
+  });
+
+  test('空数组返回 null：调用方据此隐藏「睡觉」入口', () => {
+    assert.equal(pickSleepSet([]), null);
+  });
+});
 
 describe('pickSlot —— 事件档位取值', () => {
   test('字符串槽位原样返回（原行为不变），exclude 不影响字符串', () => {

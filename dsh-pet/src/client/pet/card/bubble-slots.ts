@@ -5,17 +5,20 @@
  * 不变量：同一时刻只渲染一个气泡，优先级依次为终态任务、说话、余额、非终态任务。
  * @module dsh-pet/src/client/pet/card/bubble-slots
  */
-import { customViews, type BalanceState } from '../../../shared/balance/index.ts';
+import { balancePageCount as balancePageCountOf, type BalanceState } from '../../../shared/balance/index.ts';
+import { subscribeVoiceState, type VoiceState } from '../../../shared/voice.ts';
 import { BUBBLE_DURATION_MS } from '../timings.ts';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type * as ReactNS from 'react';
 import type { jsx } from 'react/jsx-runtime';
 
 /** 当前该挂哪个气泡；`none` 表示哪个条件都不成立。 */
-export type BubbleSlot = 'work-terminal' | 'whisper' | 'balance' | 'work' | 'none';
+export type BubbleSlot = 'todo' | 'work-terminal' | 'whisper' | 'balance' | 'work' | 'none';
 
 /** 优先级判定的输入：全部是渲染期的既成事实，判定本身不产生副作用。 */
 export interface BubbleSlotInput {
+  /** 待办面板是否打开；打开时独占槽位，其余气泡一律让位。 */
+  todoOn: boolean;
   /** 工作状态是否为终态（success / error）。 */
   workTerminal: boolean;
   /** 工作气泡是否点亮。 */
@@ -47,6 +50,8 @@ export interface BubbleSlotInput {
  * @returns 命中的槽位；都不成立时为 `none`。
  */
 export function decideBubbleSlot(input: BubbleSlotInput): BubbleSlot {
+  // 面板是用户主动打开的窗口：它占槽时其余气泡一律让位，关掉后按原规则恢复。
+  if (input.todoOn) return 'todo';
   if (input.workTerminal && input.workOn && input.workText && input.workStatusEnabled) return 'work-terminal';
   if (input.whisperOn && input.whisperText) return 'whisper';
   if (input.balanceOn && input.balanceAvailable && (input.balanceEnabled || input.balanceManual)) return 'balance';
@@ -57,15 +62,13 @@ export function decideBubbleSlot(input: BubbleSlotInput): BubbleSlot {
 /**
  * 余额气泡的可翻页数。
  *
- * custom 形态由第三方决定页数，windows 两页（收起与展开），其余形态点开没有新内容。
+ * 页数规则归 shared（与每页内容同源），这里只补一个「还没有结果」的兜底。
  *
- * @param balance - 最近一次余额结果。
+ * @param balance - 最近一次余额结果；`null` 表示这一拍还没有数据。
  * @returns 页数，至少 1。
  */
 export function balancePageCount(balance: BalanceState | null): number {
-  if (!balance || !balance.ok) return 1;
-  if (balance.shape === 'custom') return Math.max(1, customViews(balance)?.length ?? 1);
-  return balance.shape === 'windows' ? 2 : 1;
+  return balance ? balancePageCountOf(balance) : 1;
 }
 
 /** 余额气泡组件；props 与 `client/bubble.ts` 的 BalanceBubble 一致。 */
@@ -97,10 +100,15 @@ export interface BubbleSlotsRuntime {
   useEffect: (effect: ReactNS.EffectCallback, deps?: ReactNS.DependencyList) => void;
 }
 
-/** 两种气泡组件。 */
+/** 待办面板气泡组件；props 与 `client/todo-bubble.ts` 的 TodoBubble 一致。 */
+export type TodoBubbleComponent = (props: { on: boolean; onClose: () => void }) => ReactNode;
+
+/** 三种气泡组件。 */
 export interface BubbleComponents {
   /** 余额气泡。 */
   balanceBubble: BalanceBubbleComponent;
+  /** 待办面板气泡。 */
+  todoBubble: TodoBubbleComponent;
   /** 说话气泡。 */
   whisperBubble: WhisperBubbleComponent;
 }
@@ -139,6 +147,12 @@ export interface BubbleSlots {
   hideWork(): void;
   /** 回空闲：收起工作气泡并清文本。 */
   resetWork(): void;
+  /** 打开待办面板：它独占槽位，其余气泡让位。 */
+  showTodo(): void;
+  /** 收起待办面板，按原优先级恢复其余气泡。 */
+  hideTodo(): void;
+  /** 开关待办面板：已开则收起，供快捷键使用。 */
+  toggleTodo(): void;
   /** 按优先级渲染当前该挂的气泡；无气泡时为 null。 */
   node(): ReactNode;
 }
@@ -153,6 +167,7 @@ export interface BubbleSlots {
 export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComponents) {
   const { h, useState, useRef, useEffect } = rt;
   const BalanceBubble = components.balanceBubble;
+  const TodoBubble = components.todoBubble;
   const WhisperBubble = components.whisperBubble;
 
   return function useBubbleSlots(input: BubbleSlotsInput): BubbleSlots {
@@ -166,10 +181,17 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
     const [whisperImage, setWhisperImage] = useState<string | undefined>(undefined);
     const [whisperUrl, setWhisperUrl] = useState<string | undefined>(undefined);
     const whisperTimerRef = useRef<number | null>(null);
+    // 待办面板：独占槽位，没有停留计时，显隐只由用户开关。
+    const [todoOn, setTodoOn] = useState(false);
     // 工作状态气泡：显隐与文本。
     const [workOn, setWorkOn] = useState(false);
     const [workText, setWorkText] = useState<string | null>(null);
     const workTimerRef = useRef<number | null>(null);
+    // 语音播报状态：只在手动触发的那一句上有值，气泡据此显示转圈 / 喇叭
+    const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+
+    // 订阅是模块级单例：卸载时必须退订，否则旧卡片会被后续状态推送重渲染
+    useEffect(() => subscribeVoiceState(setVoiceState), []);
 
     // 卸载后不再 setState：三个计时器都在这里清。
     useEffect(
@@ -236,8 +258,13 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
       setWorkText(null);
     };
 
+    const showTodo = (): void => setTodoOn(true);
+    const hideTodo = (): void => setTodoOn(false);
+    const toggleTodo = (): void => setTodoOn((on) => !on);
+
     const node = (): ReactNode => {
       const slot = decideBubbleSlot({
+        todoOn,
         workTerminal: input.workTerminal,
         workOn,
         workText,
@@ -249,6 +276,7 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
         balanceEnabled: input.balanceEnabled,
         balanceManual: input.balanceManual,
       });
+      if (slot === 'todo') return h(TodoBubble, { on: todoOn, onClose: hideTodo });
       if (slot === 'balance') {
         return input.balance === null
           ? null
@@ -263,6 +291,7 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
               url: whisperUrl,
               assetRoot: input.assetRoot,
               on: whisperOn,
+              voiceState,
             });
       }
       // 终态与非终态共用同一个组件，差别只在停留时长与优先级。
@@ -275,12 +304,15 @@ export function createBubbleSlots(rt: BubbleSlotsRuntime, components: BubbleComp
     return {
       clearWhisper,
       cycleBalance,
+      hideTodo,
       hideWork,
       lightWork,
       node,
       resetWork,
       showBalance,
+      showTodo,
       showWhisper,
+      toggleTodo,
       updateWorkText: setWorkText,
     };
   };

@@ -4,10 +4,10 @@
  * physics 在 sprite 构造时只读一次，所以这里不做即时写入。
  * @module dsh-pet/src/client/settings/physics-card
  */
-import type { ChangeEvent, FunctionComponent } from 'react';
+import type { FunctionComponent } from 'react';
 import type { PhysicsParams } from '../../shared/types.ts';
 import type { SettingsRuntime } from './runtime.ts';
-import { INPUT_CLASS, makeUiKit } from './ui.ts';
+import { makeUiKit, numberInputProps } from './ui.ts';
 
 /** 物理卡的输入。 */
 export interface PhysicsCardProps {
@@ -33,25 +33,14 @@ export function makePhysicsCard(rt: SettingsRuntime): FunctionComponent<PhysicsC
     const { busy, physics } = props;
 
     /** 物理参数的一格：标签与问号在上、数字输入在下。 */
-    const physField = (
-      key: 'gravity' | 'restitution' | 'groundFriction' | 'throwPower',
-      step: string,
-      min: string,
-      end = false,
-    ) =>
+    const physField = (key: 'gravity' | 'restitution' | 'groundFriction' | 'throwPower', step: string, min: string) =>
       field(
         t('physics.' + key),
-        h('input', {
-          type: 'number',
-          className: INPUT_CLASS,
-          step,
-          min,
-          value: String(physics[key]),
-          disabled: busy,
-          onChange: (e: ChangeEvent<HTMLInputElement>) => props.onChange({ [key]: Number(e.target.value) }),
-        }),
+        h(
+          'input',
+          numberInputProps(physics[key], (v) => props.onChange({ [key]: v }), { step, min, disabled: busy }),
+        ),
         t('physics.' + key + 'Hint'),
-        end,
       );
 
     return h('div', {
@@ -64,7 +53,7 @@ export function makePhysicsCard(rt: SettingsRuntime): FunctionComponent<PhysicsC
             physField('gravity', '50', '0'),
             physField('restitution', '0.01', '0'),
             physField('groundFriction', '0.1', '0'),
-            physField('throwPower', '0.05', '0.05', true),
+            physField('throwPower', '0.05', '0.05'),
           ],
         }),
         h('div', {
@@ -73,12 +62,9 @@ export function makePhysicsCard(rt: SettingsRuntime): FunctionComponent<PhysicsC
             toggleCell('physicsCeilingBounce', physics.ceilingBounce, busy, (v) =>
               props.onChange({ ceilingBounce: v }),
             ),
-            toggleCell(
-              'physicsPetCollision',
-              physics.petCollision,
-              busy,
-              (v) => props.onChange({ petCollision: v }),
-              true,
+            toggleCell('physicsPetCollision', physics.petCollision, busy, (v) => props.onChange({ petCollision: v })),
+            toggleCell('physicsHaptic', physics.hapticEnabled !== false, busy, (v) =>
+              props.onChange({ hapticEnabled: v }),
             ),
           ],
         }),

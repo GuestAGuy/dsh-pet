@@ -22,6 +22,7 @@ function input(overrides: Partial<BubbleSlotInput> = {}): BubbleSlotInput {
     balanceAvailable: true,
     balanceEnabled: true,
     balanceManual: false,
+    todoOn: false,
     ...overrides,
   };
 }
@@ -82,6 +83,21 @@ describe('decideBubbleSlot —— 同一时刻只挂一个气泡', () => {
     assert.equal(decideBubbleSlot(input({ balanceOn: true, balanceEnabled: false })), 'none');
     assert.equal(decideBubbleSlot(input({ balanceOn: true, balanceEnabled: false, balanceManual: true })), 'balance');
   });
+
+  test('待办面板压过一切：用户主动打开的窗口不让位', () => {
+    const slot = decideBubbleSlot(
+      input({
+        todoOn: true,
+        workTerminal: true,
+        workOn: true,
+        workText: '跑完了',
+        whisperOn: true,
+        whisperText: '在',
+        balanceOn: true,
+      }),
+    );
+    assert.equal(slot, 'todo');
+  });
 });
 
 describe('balancePageCount —— 余额气泡可翻页数', () => {
@@ -92,6 +108,16 @@ describe('balancePageCount —— 余额气泡可翻页数', () => {
 
   test('windows：收起与展开两页', () => {
     assert.equal(balancePageCount(windowsState), 2);
+  });
+
+  test('windows 带区间用量：多一页（收起 / 窗口明细 / 用量）', () => {
+    assert.equal(
+      balancePageCount({
+        ...windowsState,
+        usage: { totalTokens: 95967948, inputTokens: 95489675, outputTokens: 478273, requests: 745, spentUsd: 1.6 },
+      }),
+      3,
+    );
   });
 
   test('custom：页数取第三方视图数', () => {

@@ -7,8 +7,10 @@
 import type { ChangeEvent, FunctionComponent } from 'react';
 import type { Corner, Pet, PetDisplay } from '../../shared/types.ts';
 import { PET_DISPLAYS } from '../../shared/config.ts';
+import { SIZE_PERCENT_DEFAULT, SIZE_PERCENT_MIN } from '../../shared/pet-size.ts';
 import type { SettingsRuntime } from './runtime.ts';
-import { INPUT_CLASS, makeUiKit } from './ui.ts';
+import { INPUT_CLASS, makeUiKit, numberInputProps } from './ui.ts';
+import { makeSelect } from './panel/select.ts';
 
 /** 宠物字段补丁：`position` 只带要改的子字段，其余字段走顶层。 */
 export type PetPatch = Partial<Omit<Pet, 'position'>> & { position?: Partial<Pet['position']> };
@@ -43,6 +45,7 @@ const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right
 export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps> {
   const { h, t } = rt;
   const { tip, q, field, toggleCell } = makeUiKit({ h, t });
+  const Select = makeSelect(rt);
 
   /** 宠物数值输入（大小 / 水平偏移 / 垂直偏移）；宽度交给栅格。 */
   const numInput = (
@@ -51,20 +54,29 @@ export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps
     disabled: boolean,
     setter: (v: number) => void,
   ) =>
-    h('input', {
-      type: 'number',
-      className: INPUT_CLASS,
-      step: key === 'size' ? '10' : '1',
-      min: key === 'size' ? '120' : '',
-      value: String(value),
-      disabled,
-      onChange: (e: ChangeEvent<HTMLInputElement>) => setter(Number(e.target.value)),
-    });
+    h(
+      'input',
+      numberInputProps(value, setter, {
+        step: key === 'size' ? '10' : '1',
+        min: key === 'size' ? '120' : '',
+        disabled,
+      }),
+    );
+
+  /** 百分比输入：默认 100；不设上限（超过 100 只在 size 也够大时才生效）。 */
+  const percentInput = (value: number, disabled: boolean, setter: (v: number) => void) =>
+    h(
+      'input',
+      numberInputProps(value, setter, {
+        min: String(SIZE_PERCENT_MIN),
+        step: '1',
+        disabled,
+      }),
+    );
 
   return function PetCard(props: PetCardProps) {
     const { pet, busy, msg } = props;
     if (pet === null) return h('p', { className: 'dsh-pet-cfg__note', children: t('emptyPets') });
-
     return h('div', {
       className: 'dsh-pet-cfg__card',
       children: [
@@ -110,7 +122,7 @@ export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps
         }),
 
         h('div', {
-          className: 'dsh-pet-cfg__grid3',
+          className: 'dsh-pet-cfg__grid4',
           children: [
             field(
               t('nameLabel'),
@@ -130,17 +142,20 @@ export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps
               t('sizeHint'),
             ),
             field(
+              t('sizePercentLabel'),
+              percentInput(pet.sizePercent ?? SIZE_PERCENT_DEFAULT, busy, (v) => props.onChange({ sizePercent: v })),
+              t('sizePercentHint'),
+            ),
+            field(
               t('displayLabel'),
-              h('select', {
-                className: INPUT_CLASS,
+              h(Select, {
+                label: t('displayLabel'),
                 value: pet.display,
+                options: PET_DISPLAYS.map((d) => ({ id: d, label: t('display.' + d) })),
                 disabled: busy,
-                onChange: (e: ChangeEvent<HTMLSelectElement>) =>
-                  props.onChange({ display: e.target.value as PetDisplay }),
-                children: PET_DISPLAYS.map((d) => h('option', { key: d, value: d, children: t('display.' + d) })),
+                onChange: (id: string) => props.onChange({ display: id as PetDisplay }),
               }),
               t('displayHint'),
-              true,
             ),
           ],
         }),
@@ -150,13 +165,12 @@ export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps
           children: [
             field(
               t('cornerLabel'),
-              h('select', {
-                className: INPUT_CLASS,
+              h(Select, {
+                label: t('cornerLabel'),
                 value: pet.position.corner,
+                options: CORNERS.map((c) => ({ id: c, label: t('corner.' + c) })),
                 disabled: busy,
-                onChange: (e: ChangeEvent<HTMLSelectElement>) =>
-                  props.onChange({ position: { corner: e.target.value as Corner } }),
-                children: CORNERS.map((c) => h('option', { key: c, value: c, children: t('corner.' + c) })),
+                onChange: (id: string) => props.onChange({ position: { corner: id as Corner } }),
               }),
               t('cornerHint'),
             ),
@@ -169,7 +183,6 @@ export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps
               t('marginY'),
               numInput('marginY', pet.position.marginY, busy, (v) => props.onChange({ position: { marginY: v } })),
               t('marginYHint'),
-              true,
             ),
           ],
         }),
@@ -182,7 +195,7 @@ export function makePetCard(rt: SettingsRuntime): FunctionComponent<PetCardProps
             toggleCell('workStatusEnabled', !!pet.workStatusEnabled, busy, (v) =>
               props.onChange({ workStatusEnabled: v }),
             ),
-            toggleCell('fixedEnabled', !!pet.fixedEnabled, busy, (v) => props.onChange({ fixedEnabled: v }), true),
+            toggleCell('fixedEnabled', !!pet.fixedEnabled, busy, (v) => props.onChange({ fixedEnabled: v })),
           ],
         }),
 

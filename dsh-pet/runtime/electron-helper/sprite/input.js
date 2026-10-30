@@ -118,7 +118,8 @@ Object.assign(PetSprite.prototype, {
       d.dragging = true;
       // 真正开始拖拽才把舞台拍平（人物随光标拿起）
       this.stage.style.transform = 'none';
-      if (this.animations.drag.length) {
+      // 睡觉：位置照常跟手，但不换拖拽动画——睡姿循环整段归睡觉状态机，顶掉就回不来了。
+      if (this.animations.drag.length && !this.sleeping) {
         this.playOnce(S.pick(this.animations.drag));
       }
       this.syncInputBusy(); // 拖拽成立：主进程兜底通道闭嘴（见 inputBusy）
@@ -173,7 +174,8 @@ Object.assign(PetSprite.prototype, {
       }
       // 拖拽松手：非终态工作状态恢复档位循环，否则回 idle。必须用 playOnce：switchTo(idle,false)
       // 会 loop 播放、ended 永不触发，随机链就再也回不来。
-      if (!this.resumeWorkStatusAnim()) {
+      // 睡觉：拖拽期间没换过动画、睡姿照播，这里不接回 idle，否则会把睡姿顶掉。
+      if (!this.sleeping && !this.resumeWorkStatusAnim()) {
         if (this.animations.idle.length) this.playOnce(S.pick(this.animations.idle, this.anim));
       }
       // 释放位置 = 弹簧跟随后的实际包围盒左上角（不是指针目标：滞后时落点应跟随宠物实际位置）
@@ -235,25 +237,20 @@ Object.assign(PetSprite.prototype, {
   /**
    * 本窗口是否必须保持可交互（= 我正在用这个窗口的鼠标输入）。
    *
-   * 来源是拖拽中 / 右键菜单开着 / 对话弹窗开着（外加可点的余额气泡）：它们都靠窗口级鼠标事件驱动，
+   * 来源是拖拽中 / 右键菜单开着 / 对话或待办弹窗开着（外加可点的余额气泡）：它们都靠窗口级鼠标事件驱动，
    * 窗口一变回穿透输入链就断（拖拽定格、松手也没人报 pointerup）。
    * 这是渲染端专有的知识，主进程无从推断；同时上报控件矩形，菜单/聊天框外仍继续穿透。
    */
   inputBusy() {
     // 可点的余额气泡是第四个来源：它长在窗口里、靠窗口级 click 触发，却悬在平时穿透的余量区，
     // 正需要借 busy + 控件矩形把它圈出来。
-    return this.dragState.active || this.menuOpen || this.chatOpen || this.balanceClickable();
+    return this.dragState.active || this.menuOpen || this.chatOpen || this.todoOpen || this.balanceClickable();
   },
 
-  /** 余额气泡当前有几页：custom 取 views.length；内置 windows 是收起/展开两页；其余一页。 */
+  /** 余额气泡当前有几页：规则归共享层（与每页内容同源），这里只补「还没有结果」的兜底。 */
   balancePageCount() {
     const s = this.balanceState;
-    if (!s || !s.ok) return 1;
-    if (s.shape === 'custom') {
-      const views = S.customViews(s);
-      return views ? Math.max(1, views.length) : 1;
-    }
-    return s.shape === 'windows' ? 2 : 1;
+    return s ? S.balancePageCount(s) : 1;
   },
 
   /** 余额气泡此刻是否可点切页：页数多于 1 且气泡正在显示。 */
@@ -279,7 +276,9 @@ Object.assign(PetSprite.prototype, {
     if (!window.petBridge || !window.petBridge.setInputRegions) return;
     const rects = [];
     // 控件矩形 = 主进程允许接收点击的区域，矩形外继续穿透。可点的余额气泡悬在余量区，不登记就点不到。
-    const controls = [...document.querySelectorAll('.dsh-pet-menu-column, .dsh-pet-chat, .pet-bubble.is-clickable')];
+    const controls = [
+      ...document.querySelectorAll('.dsh-pet-menu-column, .dsh-pet-chat, .dsh-pet-todo, .pet-bubble.is-clickable'),
+    ];
     for (const el of this.inputRegionElements) {
       if (!controls.includes(el)) {
         this.inputRegionResize.unobserve(el);
@@ -329,8 +328,8 @@ Object.assign(PetSprite.prototype, {
       this.setInteractive(true);
       return;
     }
-    // 右键菜单/对话弹窗开启：整窗保持可交互，关闭后恢复命中区判定
-    if (this.menuOpen || this.chatOpen) {
+    // 右键菜单/对话弹窗/待办面板开启：整窗保持可交互，关闭后恢复命中区判定
+    if (this.menuOpen || this.chatOpen || this.todoOpen) {
       this.syncInputRegions(); // 级联菜单按悬停增减面板，及时更新占用区域
       this.setInteractive(true);
       this.setTip(false); // 菜单/弹窗期间提示让位，不跟浮层抢注意力
@@ -359,7 +358,7 @@ Object.assign(PetSprite.prototype, {
   onClick(e) {
     const d = this.dragState;
     if (d.active || d.dragging || this.justDragged) return;
-    // Ctrl（macOS 为 Cmd）+ 左键 = 呼出 DSH：与菜单「打开网站」同一动作，只是快捷键——
+    // Ctrl（macOS 为 Cmd）+ 左键 = 呼出 DSH：与菜单首项同一动作，只是快捷键——
     // 不播点击动画、也不参与积分，避免「摸一下宠物」变成「开窗口」。
     if (isOpenShortcut(e)) {
       this.stopThrow();
@@ -376,6 +375,24 @@ Object.assign(PetSprite.prototype, {
     }
     this.stopThrow(); // 点击飞行中的宠物 = 收手停住（再播点击回应）
     this.stopMove();
+    // 睡觉：点一下就是叫醒。挤压与音效照常（手感与平时一致），但不播点击回应动画——
+    // 叫醒的表现由 /wake 写回的 sleep 叶子驱动（end 播一遍，播完回随机链）。
+    // 这里直接压当前前台那一帧：平时靠 pendingSquash 等新动画就位，这条路没有换源。
+    if (this.sleeping) {
+      playClickSound();
+      const front = this.front === 0 ? this.videoA : this.videoB;
+      if (front) this.startSquash(front);
+      this.postSleepAction('wake');
+      // 入睡过渡里被点：这次入睡作废，按普通点击播回应动画——「起来」那段不再播。
+      // 先本地清状态：等叶子回来时 setSleep 会因「本来没睡」直接返回，不会插一段 end。
+      if (this.sleepPhase === 'start') {
+        this.sleeping = false;
+        this.sleepSet = null;
+        this.sleepPhase = null;
+        if (this.animations.clicks.length) this.playOnce(S.pick(this.animations.clicks));
+      }
+      return;
+    }
     // 点击音效与浏览器同位置：放在「按下已触发积分」的早退之后、点击动画判断之前
     playClickSound();
     if (!this.animations.clicks.length) return;
@@ -408,11 +425,23 @@ Object.assign(PetSprite.prototype, {
     this.showChatFromMenu(file);
   },
 
-  /** 悬停快捷键：光标在身体上时按 T 打开对话，等价于菜单里的「对话」。 */
+  /** 悬停快捷键：光标在身体上时按 T 开对话、按 D 开关待办、按 S 切换睡/醒。 */
   onHotkey(e) {
     if (!this.hoverBody) return;
-    if (!S.isChatHotkey(e)) return;
-    e.preventDefault();
-    this.showChatFromMenu();
+    if (S.isChatHotkey(e)) {
+      e.preventDefault();
+      this.showChatFromMenu();
+      return;
+    }
+    if (S.isTodoHotkey(e)) {
+      e.preventDefault();
+      this.toggleTodo();
+      return;
+    }
+    // 睡觉：与浏览器同为切换语义；该条目没配睡觉动画时整项无效（菜单里也不出现）
+    if (S.isSleepHotkey(e) && Array.isArray(this.animations.sleep) && this.animations.sleep.length > 0) {
+      e.preventDefault();
+      this.postSleepAction(this.sleeping ? 'wake' : 'sleep');
+    }
   },
 });

@@ -5,12 +5,16 @@
  * @module dsh-pet/src/host/plugin/loops
  */
 import { findPetInstance, flattenPetList, readAllConfig } from '../config.ts';
+import { isDisplayed } from '../surface.ts';
 import { automaticWhisperSchedule } from '../whisper-policy.ts';
 import type { BalancePoll } from './balance-poll.ts';
 import type { ChatMemory } from './chat-memory.ts';
 import type { PetLookup } from './pet-lookup.ts';
 import type { HostSetup } from './setup.ts';
 import type { HostContext } from './context.ts';
+
+/** 梦话周期的兜底值（秒）：配置里 eventsRefreshSec.sleepTalk 缺失/非法时用它。 */
+const SLEEP_TALK_DEFAULT_SEC = 60;
 
 /** 轮询循环的输入。 */
 export type LoopsInput = {
@@ -20,8 +24,10 @@ export type LoopsInput = {
   Pick<HostSetup, 'configPaths'> &
   Pick<ChatMemory, 'lastWhisperAt'> &
   Pick<PetLookup, 'lock'> &
+  Pick<PetLookup, 'sleep'> &
   Pick<HostSetup, 'log'> &
   Pick<ChatMemory, 'publishWhisper'> &
+  Pick<ChatMemory, 'publishSleepTalk'> &
   Pick<BalancePoll, 'refreshBalance'> &
   Pick<HostSetup, 'standaloneAiPolicy'> &
   Pick<BalancePoll, 'whisperPeriodSec'>;
@@ -36,7 +42,9 @@ export function registerLoops(deps: LoopsInput): void {
     lock,
     log,
     publishWhisper,
+    publishSleepTalk,
     refreshBalance,
+    sleep,
     standaloneAiPolicy,
     whisperPeriodSec,
   } = deps;
@@ -54,9 +62,14 @@ export function registerLoops(deps: LoopsInput): void {
       try {
         const cfg = readAllConfig(configPaths);
         sec = balancePeriodSec(cfg);
-        // 没有任何启用余额的宠物 → 不查（省外部调用）；配置改了下一拍自然跟上
-        if (flattenPetList(cfg).some((p) => p.balanceEnabled === true)) await refreshBalance();
-        else log.info('[dsh-pet] 余额周期跳过：没有启用余额的宠物');
+        // 没有任何「醒着且启用余额」的宠物 → 不查（省外部调用）：睡着的宠物不看不听，
+        // 拉了也只会白花一次外部 API；配置改了或醒了，下一拍自然跟上。
+        const pets = flattenPetList(cfg);
+        if (pets.some((p) => p.balanceEnabled === true && !sleep.sleeping(String(p.id ?? '')))) {
+          await refreshBalance();
+        } else {
+          log.info('[dsh-pet] 余额周期跳过：没有醒着且启用余额的宠物');
+        }
       } catch (e) {
         // 读配置抛错 = 安装损坏（readAllConfig 只在内置默认缺失/损坏时抛，用户层写坏只会告警回退）：
         // 不再重排——每 30 分钟重试一次没有意义，而且会白占一个常驻定时器。留一行 warn：这条路径
@@ -117,6 +130,14 @@ export function registerLoops(deps: LoopsInput): void {
             );
             continue;
           }
+          // 配置上不显示的宠物不生成：用户选「都不显示」就是不用了，后台继续调模型纯属白烧额度（#237）。
+          // 放在 min 之前：不可见的宠物也不该把整拍的周期拖住。不推进 lastWhisperAt——
+          // 与占用锁同一口径，重新可见后下一拍立刻补一句。
+          const display = String(pet.display ?? '');
+          if (!isDisplayed(display)) {
+            skipped.push(petId + ': display=none');
+            continue;
+          }
           const sec = schedule.periodSec;
           min = Math.min(min, sec);
           if (now - (lastWhisperAt.get(petId) ?? 0) < sec * 1000) {
@@ -131,11 +152,17 @@ export function registerLoops(deps: LoopsInput): void {
             skipped.push(petId + ': 占用锁跳过');
             continue;
           }
+          // 睡觉：不生成、也不推进 lastWhisperAt——醒来的下一拍立刻补一句，与占用锁同一口径。
+          if (sleep.sleeping(petId)) {
+            skipped.push(petId + ': 睡觉中');
+            continue;
+          }
           due += 1;
           log.info(`[dsh-pet] 碎碎念到点 pet=${petId}（周期 ${sec}s），开始生成`);
           lastWhisperAt.set(petId, now);
-          // 不 await：生成要几秒，别把调度拍拖住（每只宠物独立生成，互不阻塞）
-          void publishWhisper(petId).catch(() => {});
+          // 不 await：生成要几秒，别把调度拍拖住（每只宠物独立生成，互不阻塞）。
+          // kind=whisper 让生成侧按 voiceWhisperEnabled 决定要不要带 voiceTo。
+          void publishWhisper(petId, undefined, undefined, 'whisper').catch(() => {});
         }
         if (Number.isFinite(min)) next = min;
         // 每拍一行汇总：调度是否还在跑、下一拍多久、为什么跳过，全在这一行里（300s 一条，量可忽略）
@@ -161,4 +188,56 @@ export function registerLoops(deps: LoopsInput): void {
       if (timer !== null) clearTimeout(timer);
     };
   }, 'dsh-pet: whisper poll');
+
+  // 梦话周期：只对正在睡的宠物，按各自条目的 eventsRefreshSec.sleepTalk 排。
+  // 与碎碎念同一个形态（固定拍 + 逐宠物比对 lastAt），宠物增删与周期改动天然跟上。
+  ctx.effect(() => {
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    /** petId → 上一次说梦话的时刻；醒来不清，下次睡着时按周期自然接着算。 */
+    const lastTalkAt = new Map<string, number>();
+    function arm(sec: number): void {
+      if (disposed) return;
+      timer = setTimeout(() => void tick(), Math.max(1000, sec * 1000));
+    }
+    function tick(): void {
+      let next = SLEEP_TALK_DEFAULT_SEC;
+      try {
+        const cfg = readAllConfig(configPaths);
+        const now = Date.now();
+        let min = Infinity;
+        for (const petId of sleep.ids()) {
+          const found = findPetInstance(cfg, petId);
+          if (!found) continue;
+          const sec = sleepTalkPeriodSec(found.conf);
+          min = Math.min(min, sec);
+          if (now - (lastTalkAt.get(petId) ?? 0) < sec * 1000) continue;
+          lastTalkAt.set(petId, now);
+          // 不 await：生成要几秒，别把调度拍拖住
+          void publishSleepTalk(petId).catch(() => {});
+        }
+        if (Number.isFinite(min)) next = min;
+      } catch (e) {
+        // 读配置抛错 = 安装损坏：停止本循环并留一行日志（与另外两个循环同一口径）
+        log.warn(
+          '[dsh-pet] 梦话调度读配置失败，说梦话已停止（重启 DSH 后恢复）：' +
+            (e instanceof Error ? e.message : String(e)),
+        );
+        return;
+      }
+      arm(next);
+    }
+    void tick();
+    return () => {
+      disposed = true;
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, 'dsh-pet: sleep talk poll');
+}
+
+/** 梦话周期（秒）：条目级 eventsRefreshSec.sleepTalk，读不到按 60 兜底（与配置注释同一口径）。 */
+function sleepTalkPeriodSec(conf: Record<string, unknown>): number {
+  const table = conf.eventsRefreshSec as Record<string, unknown> | undefined;
+  const sec = Number(table?.sleepTalk);
+  return Number.isFinite(sec) && sec > 0 ? sec : SLEEP_TALK_DEFAULT_SEC;
 }

@@ -4,11 +4,12 @@
  * 与其余全局默认同语义：只改本地状态，随「保存」整包写入。
  * @module dsh-pet/src/client/settings/font-card
  */
-import type { ChangeEvent, FunctionComponent } from 'react';
+import type { FunctionComponent } from 'react';
 import type { FontConfig, FontFamilyId } from '../../shared/types.ts';
 import { FONT_PRESETS, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../../shared/fonts.ts';
 import type { SettingsRuntime } from './runtime.ts';
-import { INPUT_CLASS, makeUiKit } from './ui.ts';
+import { makeUiKit, numberInputProps } from './ui.ts';
+import { makeSelect } from './panel/select.ts';
 
 /** 字体卡的输入。 */
 export interface FontCardProps {
@@ -29,6 +30,7 @@ export interface FontCardProps {
 export function makeFontCard(rt: SettingsRuntime): FunctionComponent<FontCardProps> {
   const { h, t } = rt;
   const { cardHead, field, toggleCell } = makeUiKit({ h, t });
+  const Select = makeSelect(rt);
 
   return function FontCard(props: FontCardProps) {
     const { busy, font } = props;
@@ -41,32 +43,27 @@ export function makeFontCard(rt: SettingsRuntime): FunctionComponent<FontCardPro
           children: [
             field(
               t('fontFamilyLabel'),
-              h('select', {
-                className: INPUT_CLASS,
+              h(Select, {
+                label: t('fontFamilyLabel'),
                 value: font.family,
+                options: FONT_PRESETS.map((preset) => ({ id: preset.id, label: t('font.' + preset.id) })),
                 disabled: busy,
-                onChange: (e: ChangeEvent<HTMLSelectElement>) =>
-                  props.onChange({ family: e.target.value as FontFamilyId }),
-                children: FONT_PRESETS.map((preset) =>
-                  h('option', { key: preset.id, value: preset.id, children: t('font.' + preset.id) }),
-                ),
+                onChange: (id: string) => props.onChange({ family: id as FontFamilyId }),
               }),
               t('fontFamilyHint'),
             ),
             field(
               t('fontSizeLabel'),
-              h('input', {
-                type: 'number',
-                className: INPUT_CLASS,
-                step: '1',
-                min: String(FONT_SIZE_MIN),
-                max: String(FONT_SIZE_MAX),
-                value: String(font.size),
-                disabled: busy,
-                onChange: (e: ChangeEvent<HTMLInputElement>) => props.onChange({ size: Number(e.target.value) }),
-              }),
+              h(
+                'input',
+                numberInputProps(font.size, (v) => props.onChange({ size: v }), {
+                  step: '1',
+                  min: String(FONT_SIZE_MIN),
+                  max: String(FONT_SIZE_MAX),
+                  disabled: busy,
+                }),
+              ),
               t('fontSizeHint'),
-              true,
             ),
           ],
         }),

@@ -227,8 +227,11 @@ describe('buildSaveBody —— 请求体字段', () => {
       clickSoundEnabled: false,
       whisperImageEnabled: false,
       chatImageEnabled: false,
+      chatAnimationEnabled: false,
       confineToScreen: false,
       trayEnabled: true,
+      voiceEnabled: true,
+      voiceName: 'zh-CN-XiaoyiNeural',
       physics: {},
       whisperModel: { provider: '', model: '' },
       chatModel: { provider: '', model: '' },
@@ -237,6 +240,7 @@ describe('buildSaveBody —— 请求体字段', () => {
       font: {},
     } as unknown as SaveFields;
     assert.deepEqual(Object.keys(buildSaveBody(fields)).sort(), [
+      'chatAnimationEnabled',
       'chatImageEnabled',
       'chatImageLimit',
       'chatMemoryRounds',
@@ -248,6 +252,10 @@ describe('buildSaveBody —— 请求体字段', () => {
       'pets',
       'physics',
       'trayEnabled',
+      'voiceEnabled',
+      'voiceName',
+      'voiceTodoEnabled',
+      'voiceWhisperEnabled',
       'whisperImageEnabled',
       'whisperModel',
     ]);
@@ -260,6 +268,7 @@ describe('buildSaveBody —— 请求体字段', () => {
       clickSoundEnabled: true,
       whisperImageEnabled: true,
       chatImageEnabled: true,
+      chatAnimationEnabled: true,
       confineToScreen: true,
       trayEnabled: false,
       physics: { gravity: 3 },

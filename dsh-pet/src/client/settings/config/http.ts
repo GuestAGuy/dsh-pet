@@ -16,6 +16,8 @@ export interface ConfigMeta {
   animations: string;
   /** 用户表情包目录（加图不必改包）。 */
   memes?: string;
+  /** 待办数据文件（一份用户级数据，不分宠物）。 */
+  todos?: string;
   /** 统一日志文件；桌面版没控制台，排障只看它。 */
   logs?: string;
   /** 插件落盘的全部位置（路径与是否已存在）。 */
@@ -31,8 +33,18 @@ export interface SaveFields {
   clickSoundEnabled: boolean;
   whisperImageEnabled: boolean;
   chatImageEnabled: boolean;
+  /** 对话动作联动开关。 */
+  chatAnimationEnabled: boolean;
   confineToScreen: boolean;
   trayEnabled: boolean;
+  /** 语音播报总开关。 */
+  voiceEnabled: boolean;
+  /** 语音音色 id（白名单内的四个之一）。 */
+  voiceName: string;
+  /** 周期碎碎念要不要念出来。 */
+  voiceWhisperEnabled: boolean;
+  /** 待办提醒要不要念出来。 */
+  voiceTodoEnabled: boolean;
   physics: PhysicsParams;
   whisperModel: ModelSelection;
   chatModel: ModelSelection;
@@ -61,8 +73,13 @@ export function buildSaveBody(fields: SaveFields): Record<string, unknown> {
     clickSoundEnabled: fields.clickSoundEnabled,
     whisperImageEnabled: fields.whisperImageEnabled,
     chatImageEnabled: fields.chatImageEnabled,
+    chatAnimationEnabled: fields.chatAnimationEnabled,
     confineToScreen: fields.confineToScreen,
     trayEnabled: fields.trayEnabled,
+    voiceEnabled: fields.voiceEnabled,
+    voiceName: fields.voiceName,
+    voiceWhisperEnabled: fields.voiceWhisperEnabled,
+    voiceTodoEnabled: fields.voiceTodoEnabled,
     physics: fields.physics,
     whisperModel: fields.whisperModel,
     chatModel: fields.chatModel,

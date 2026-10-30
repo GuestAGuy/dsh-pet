@@ -1,0 +1,71 @@
+0 verbose cli /home/aguy/.nvm/versions/node/v24.14.1/bin/node /home/aguy/.nvm/versions/node/v24.14.1/bin/npm
+1 info using npm@11.11.0
+2 info using node@v24.14.1
+3 silly config load:file:/home/aguy/.nvm/versions/node/v24.14.1/lib/node_modules/npm/npmrc
+4 silly config load:file:/home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet/.npmrc
+5 silly config load:file:/home/aguy/.npmrc
+6 silly config load:file:/home/aguy/.nvm/versions/node/v24.14.1/etc/npmrc
+7 verbose title npm install
+8 verbose argv "install" "--no-audit" "--no-fund" "--ignore-scripts" "--cache" "/home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet/../.npm-cache" "--logs-dir" "/home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet/../.npm-logs"
+9 verbose logfile logs-max:10 dir:/home/aguy/Documents/deepseek-harness/default-workspace/fork/.npm-logs/2026-10-30T20_44_43_716Z-
+10 verbose logfile /home/aguy/Documents/deepseek-harness/default-workspace/fork/.npm-logs/2026-10-30T20_44_43_716Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly idealTree buildDeps
+14 silly fetch manifest @andresaya/edge-tts@^1.9.1
+15 silly packumentCache full:https://registry.npmjs.org/@andresaya%2fedge-tts cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/@andresaya%2fedge-tts 339ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/@andresaya%2fedge-tts set size:undefined disposed:false
+18 silly placeDep ROOT @andresaya/edge-tts@1.9.1 OK for: dsh-pet@0.3.8 want: ^1.9.1
+19 silly fetch manifest ws@^8.18.3
+20 silly packumentCache full:https://registry.npmjs.org/ws cache-miss
+21 silly fetch manifest commander@^12.1.0
+22 silly packumentCache full:https://registry.npmjs.org/commander cache-miss
+23 http fetch GET 200 https://registry.npmjs.org/commander 65ms (cache miss)
+24 silly packumentCache full:https://registry.npmjs.org/commander set size:undefined disposed:false
+25 http fetch GET 200 https://registry.npmjs.org/ws 71ms (cache miss)
+26 silly packumentCache full:https://registry.npmjs.org/ws set size:undefined disposed:false
+27 silly fetch manifest bufferutil@^4.0.1
+28 silly packumentCache full:https://registry.npmjs.org/bufferutil cache-miss
+29 http fetch GET 200 https://registry.npmjs.org/bufferutil 27ms (cache miss)
+30 silly packumentCache full:https://registry.npmjs.org/bufferutil set size:undefined disposed:false
+31 silly fetch manifest utf-8-validate@>=5.0.2
+32 silly packumentCache full:https://registry.npmjs.org/utf-8-validate cache-miss
+33 http fetch GET 200 https://registry.npmjs.org/utf-8-validate 19ms (cache miss)
+34 silly packumentCache full:https://registry.npmjs.org/utf-8-validate set size:undefined disposed:false
+35 silly placeDep node_modules/@andresaya/edge-tts commander@12.1.0 OK for: @andresaya/edge-tts@1.9.1 want: ^12.1.0
+36 silly placeDep ROOT ws@8.22.0 OK for: @andresaya/edge-tts@1.9.1 want: ^8.18.3
+37 warn EBADENGINE Unsupported engine {
+37 warn EBADENGINE   package: '@es-joy/jsdoccomment@1.0.0',
+37 warn EBADENGINE   required: { node: '^22.22.2 || >=24.15.0' },
+37 warn EBADENGINE   current: { node: 'v24.14.1', npm: '11.11.0' }
+37 warn EBADENGINE }
+38 warn EBADENGINE Unsupported engine {
+38 warn EBADENGINE   package: 'eslint-plugin-jsdoc@65.4.2',
+38 warn EBADENGINE   required: { node: '^22.22.2 || >=24.15.0' },
+38 warn EBADENGINE   current: { node: 'v24.14.1', npm: '11.11.0' }
+38 warn EBADENGINE }
+39 warn EBADENGINE Unsupported engine {
+39 warn EBADENGINE   package: 'jsdoc-type-pratt-parser@9.4.0',
+39 warn EBADENGINE   required: { node: '^22.22.2 || >=24.15.0' },
+39 warn EBADENGINE   current: { node: 'v24.14.1', npm: '11.11.0' }
+39 warn EBADENGINE }
+40 silly reify moves {}
+41 http cache ws@https://registry.npmjs.org/ws/-/ws-8.22.0.tgz 0ms (cache hit)
+42 http cache @andresaya/edge-tts@https://registry.npmjs.org/@andresaya/edge-tts/-/edge-tts-1.9.1.tgz 0ms (cache hit)
+43 http cache commander@https://registry.npmjs.org/commander/-/commander-12.1.0.tgz 0ms (cache hit)
+44 silly tarball no local data for ws@https://registry.npmjs.org/ws/-/ws-8.22.0.tgz. Extracting by manifest.
+45 silly tarball no local data for commander@https://registry.npmjs.org/commander/-/commander-12.1.0.tgz. Extracting by manifest.
+46 silly tarball no local data for @andresaya/edge-tts@https://registry.npmjs.org/@andresaya/edge-tts/-/edge-tts-1.9.1.tgz. Extracting by manifest.
+47 http fetch GET 200 https://registry.npmjs.org/ws/-/ws-8.22.0.tgz 30ms (cache miss)
+48 http fetch GET 200 https://registry.npmjs.org/commander/-/commander-12.1.0.tgz 33ms (cache miss)
+49 http fetch GET 200 https://registry.npmjs.org/@andresaya/edge-tts/-/edge-tts-1.9.1.tgz 162ms (cache miss)
+50 silly ADD node_modules/ws
+51 silly ADD node_modules/@andresaya/edge-tts
+52 silly ADD node_modules/@andresaya/edge-tts/node_modules/commander
+53 verbose cwd /home/aguy/Documents/deepseek-harness/default-workspace/fork/dsh-pet
+54 verbose os Linux 6.8.0-138-generic
+55 verbose node v24.14.1
+56 verbose npm  v11.11.0
+57 verbose exit 0
+58 info ok

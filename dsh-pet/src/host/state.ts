@@ -24,11 +24,11 @@ export interface StateLeaf {
 export type SectionName = 'balance' | 'workStatus' | 'notify' | 'config' | 'menu';
 
 /** 每宠物段（say = 要说的话；anim = 要播的动画名；position = 要挪到的位置；throw = 要给的初速度；
- *  lock = 占用锁状态）。
+ *  lock = 占用锁状态；sleep = 睡觉状态）。
  *  say / anim / position / throw 是 host → 前端的指令：前端读到即执行，不往它们写任何东西。
- *  `lock` 是状态不是指令：前端读它决定要不要冻结自己，并按叶子里的 expiresAt 自己解除静止——
- *  宿主侧没有定时器（见 ./lock）。 */
-export type PetLeafName = 'say' | 'anim' | 'position' | 'throw' | 'lock';
+ *  `lock` / `sleep` 是状态不是指令：前端读它决定要不要冻结或播睡姿，并按叶子里的值自己收尾——
+ *  宿主侧没有定时器（见 ./lock、./sleep）。 */
+export type PetLeafName = 'say' | 'anim' | 'position' | 'throw' | 'lock' | 'sleep';
 
 /** S 的完整形态（GET /state 的响应体）。
  *  `counter` 是整份 S 的版本号 = 最后一次写入的编号，顶层而非叶子：调用方拿它当 `?since=` 回传。 */
@@ -136,7 +136,14 @@ export class PollStateStore {
   writePet(petId: string, leaf: PetLeafName, data: unknown): void {
     let entry = this.pets.get(petId);
     if (!entry) {
-      entry = { say: emptyLeaf(), anim: emptyLeaf(), position: emptyLeaf(), throw: emptyLeaf(), lock: emptyLeaf() };
+      entry = {
+        say: emptyLeaf(),
+        anim: emptyLeaf(),
+        position: emptyLeaf(),
+        throw: emptyLeaf(),
+        lock: emptyLeaf(),
+        sleep: emptyLeaf(),
+      };
       this.pets.set(petId, entry);
     }
     entry[leaf] = { counter: this.next(), data };

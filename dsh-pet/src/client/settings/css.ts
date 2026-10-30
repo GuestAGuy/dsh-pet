@@ -1,5 +1,5 @@
 /**
- * 设置页样式表与注入入口：两族类名——`dsh-pet-mp__*`（AI 模型选择器）与 `dsh-pet-cfg__*`（配置卡片）。
+ * 设置页样式表与注入入口：三族类名——`dsh-pet-mp__*`（AI 模型选择器）、`dsh-pet-sel__*`（通用单选下拉）与 `dsh-pet-cfg__*`（配置卡片）。
  * 只放伪类、悬浮、过渡与容器查询这类内联 style 表达不了的东西，其余排版走组件内联 style。
  * 颜色与圆角取 `--dsw-alias-*` / `--dsw-radius-*` token；填充按钮上的白字与阴影回退值是刻意例外。
  * 注入按 `data-plugin-css` 去重，同一页面重复渲染设置页不会长第二份样式。
@@ -21,7 +21,9 @@ const SETTINGS_CSS = [
   '.dsh-pet-mp__panel{position:fixed;z-index:2147483000;display:flex;flex-direction:column;gap:4px;padding:4px;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-md,10px);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-prominent,0 8px 30px rgba(0,0,0,.35));color:var(--dsw-alias-label-primary)}',
   '.dsh-pet-mp__search{box-sizing:border-box;width:100%;height:28px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-size:13px;outline:none}',
   '.dsh-pet-mp__search:focus{border-color:var(--dsw-alias-state-business-primary)}',
-  '.dsh-pet-mp__list{display:flex;flex-direction:column;min-height:0;overflow-y:auto;scrollbar-width:thin}',
+  // overflow-x 必须显式 hidden：只设 overflow-y 时 CSS 会把另一轴的 visible 抬成 auto，
+  // 而条目是 width:100% + 左右 padding，横向会多出 16px，于是冒出没用的横向滚动条。
+  '.dsh-pet-mp__list{display:flex;flex-direction:column;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
   '.dsh-pet-mp__group{padding:6px 8px 2px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary)}',
   '.dsh-pet-mp__item{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:none;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:inherit;font-size:13px;line-height:20px;text-align:left;cursor:pointer}',
   '.dsh-pet-mp__item:hover:not(:disabled),.dsh-pet-mp__item.is-active{background:var(--dsw-alias-interactive-bg-hover)}',
@@ -31,12 +33,42 @@ const SETTINGS_CSS = [
   '.dsh-pet-mp__check{flex:none;margin-left:auto}',
   '.dsh-pet-mp__status{padding:8px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary)}',
 
+  // 通用单选下拉：触发器叠加在 __inp 之上，只补按钮该有而输入框没有的排布；浮层与上面的模型选择器同一套外观。
+  '.dsh-pet-sel{position:relative;min-width:0}',
+  '.dsh-pet-sel__trigger{display:flex;align-items:center;gap:6px;text-align:left;cursor:pointer}',
+  '.dsh-pet-sel__trigger:disabled{cursor:default}',
+  '.dsh-pet-sel__label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}',
+  // 箭头用小三角而不是字符：不依赖字体，旋转时的基线与折叠卡一致。
+  '.dsh-pet-sel__chevron{flex:none;margin-left:auto;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;color:var(--dsw-alias-label-tertiary);transition:transform .12s}',
+  '.dsh-pet-sel__chevron.is-open{transform:rotate(180deg)}',
+  '.dsh-pet-sel__panel{position:fixed;z-index:2147483000;display:flex;flex-direction:column;gap:2px;padding:4px;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-md,10px);background:var(--dsw-alias-bg-layer-1);box-shadow:var(--dsw-elevation-prominent,0 8px 30px rgba(0,0,0,.35));color:var(--dsw-alias-label-primary)}',
+  '.dsh-pet-sel__list{display:flex;flex-direction:column;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}',
+  '.dsh-pet-sel__item{display:flex;align-items:center;gap:8px;width:100%;padding:5px 8px;border:none;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:inherit;font:inherit;font-size:13px;line-height:20px;text-align:left;cursor:pointer}',
+  '.dsh-pet-sel__item:hover:not(:disabled),.dsh-pet-sel__item.is-active{background:var(--dsw-alias-interactive-bg-hover)}',
+  '.dsh-pet-sel__item[aria-selected="true"]{color:var(--dsw-alias-state-business-primary)}',
+  '.dsh-pet-sel__item:disabled{color:var(--dsw-alias-label-dimmed);cursor:default}',
+  '.dsh-pet-sel__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}',
+  '.dsh-pet-sel__check{flex:none;margin-left:auto}',
+
   '.dsh-pet-cfg{container-type:inline-size;display:flex;flex-direction:column;gap:12px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:20px}',
   '.dsh-pet-cfg__title{display:flex;align-items:center;gap:6px;margin:0;font-size:16px;font-weight:500;line-height:24px}',
 
   '.dsh-pet-cfg__card{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border:1px solid var(--dsw-alias-border-l2);border-radius:12px}',
   '.dsh-pet-cfg__cardHead{display:flex;align-items:center;gap:6px;min-height:20px}',
   '.dsh-pet-cfg__cardTitle{font-size:13px;font-weight:500;color:var(--dsw-alias-label-primary)}',
+
+  // 折叠卡（高级配置 / 卸载与存储）：标题行常驻，正文收进裁剪层。
+  // 卡片自身的 gap 归零，头与正文的间距改由正文内层的 padding-top 提供——收起时随裁剪一起消失，底部不留空缝。
+  '.dsh-pet-cfg__card.is-fold{gap:0}',
+  '.dsh-pet-cfg__foldToggle{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;min-height:20px;padding:0;border:none;border-radius:4px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;outline:none}',
+  '.dsh-pet-cfg__foldToggle:focus-visible{box-shadow:0 0 0 2px var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary))}',
+  // 箭头用小三角而不是字符：不依赖字体、缩进也不受行高影响。
+  '.dsh-pet-cfg__chevron{flex:none;margin-left:auto;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;color:var(--dsw-alias-label-tertiary);transition:transform .12s}',
+  '.dsh-pet-cfg__chevron.is-open{transform:rotate(180deg)}',
+  '.dsh-pet-cfg__fold{display:grid;grid-template-rows:0fr;transition:grid-template-rows .12s ease}',
+  '.dsh-pet-cfg__card.is-open .dsh-pet-cfg__fold{grid-template-rows:1fr}',
+  '.dsh-pet-cfg__foldClip{min-height:0;overflow:hidden}',
+  '.dsh-pet-cfg__foldBody{display:flex;flex-direction:column;gap:10px;padding-top:10px}',
 
   '.dsh-pet-cfg__grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 16px;align-items:end}',
   '.dsh-pet-cfg__grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 16px;align-items:end}',
@@ -62,15 +94,15 @@ const SETTINGS_CSS = [
   '.dsh-pet-cfg__toggle>label>span{overflow-wrap:anywhere}',
   '.dsh-pet-cfg__toggle input[type=checkbox]{flex:none;width:16px;height:16px;margin:0;accent-color:var(--dsw-alias-state-business-primary);cursor:pointer}',
 
-  // 悬浮说明通用件：任何带 data-tip 的元素悬浮即出气泡，组件侧用 tip() 生成属性，不额外包 DOM。
-  '.dsh-pet-cfg [data-tip]{position:relative}',
-  // 气泡默认左对齐：触发元素常贴卡片左缘，居中会向左伸出并被 overflow 裁掉；贴右缘的用 data-tip-end。
-  '.dsh-pet-cfg [data-tip]::after{display:none;content:attr(data-tip);position:absolute;left:-4px;bottom:calc(100% + 8px);width:max-content;max-width:260px;padding:6px 10px;border-radius:8px;background:var(--dsw-alias-tooltip-bg);color:#fff;font-size:12px;font-style:normal;font-weight:400;line-height:18px;text-align:left;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease;box-shadow:0 6px 20px rgba(0,0,0,.22);z-index:2147483000}',
-  '.dsh-pet-cfg [data-tip]:hover::after{display:block;opacity:1;visibility:visible}',
-  '.dsh-pet-cfg [data-tip][data-tip-end]::after{left:auto;right:-4px}',
+  // 悬浮说明气泡：由 ./tip-layer 按光标挂到 body 上，不画在触发元素里——右列与贴顶的说明
+  // 会被窗口边缘或滚动容器裁掉。这里只管外观，坐标由 tooltipPlacement 写进 style。
+  '.pet-cfg-tip{position:fixed;left:0;top:0;z-index:2147483000;max-width:320px;padding:6px 10px;border-radius:8px;background:var(--dsw-alias-tooltip-bg);color:var(--dsw-static-neutral-00);font-size:12px;font-style:normal;font-weight:400;line-height:18px;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;opacity:0;transition:opacity .12s ease;box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.22))}',
+  '.pet-cfg-tip.is-on{opacity:1}',
 
   // 问号：气泡的一个圆形宿主外观。
   '.dsh-pet-cfg__q{display:inline-flex;align-items:center;justify-content:center;flex:none;width:14px;height:14px;border:1px solid var(--dsw-alias-label-tertiary);border-radius:50%;color:var(--dsw-alias-label-tertiary);font-size:10px;font-style:normal;line-height:1;cursor:help;user-select:none}',
+  // 折叠卡把问号放进了标题按钮里：包一层 span 以便单独拦截点击（点问号只出气泡、不开合）。
+  '.dsh-pet-cfg__qWrap{display:inline-flex;flex:none;align-items:center}',
 
   '.dsh-pet-cfg__btn{border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-primary);border-radius:8px;padding:4px 14px;font:inherit;font-size:12px;line-height:20px;cursor:pointer;white-space:nowrap}',
   // 实心主按钮必须排除在通用 hover 外：半透明 hover 会顶掉 button-info-fill，让蓝色按钮一悬停就发白；

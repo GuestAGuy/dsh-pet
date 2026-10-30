@@ -20,6 +20,7 @@ import {
   readBalance,
   readPosition,
   readSay,
+  readSleep,
   readThrow,
   resolveLeafPath,
   takeChanged,
@@ -284,7 +285,7 @@ describe('readSay —— 说话叶子（弹气泡 / 清空 两种形态）', () 
     return hit && hit.kind === 'say' ? hit : null;
   };
 
-  test('弹气泡：文本与配图取到；不带 duration/anim 时两者都 undefined（= 老行为 10s + 联动）', () => {
+  test('弹气泡：文本与配图取到；不带 duration/anim/voiceTo 时三者都 undefined（= 老行为 10s + 联动 + 不念）', () => {
     assert.deepEqual(say({ text: '主人今天也要加油哦～', image: '可爱' }), {
       kind: 'say',
       text: '主人今天也要加油哦～',
@@ -292,6 +293,7 @@ describe('readSay —— 说话叶子（弹气泡 / 清空 两种形态）', () 
       url: undefined,
       duration: undefined,
       anim: undefined,
+      voiceTo: undefined,
     });
   });
 
@@ -322,6 +324,18 @@ describe('readSay —— 说话叶子（弹气泡 / 清空 两种形态）', () 
     assert.equal(say({ text: 'x', duration: 0, anim: false })?.anim, false);
     assert.equal(say({ text: 'x', duration: 3000, anim: true })?.duration, 3000);
     assert.equal(say({ text: 'x', duration: 3000, anim: true })?.anim, true);
+  });
+
+  test('voiceTo：只认 web / desktop，其余当作没给（undefined）', () => {
+    assert.equal(say({ text: 'x', voiceTo: 'web' })?.voiceTo, 'web');
+    assert.equal(say({ text: 'x', voiceTo: 'desktop' })?.voiceTo, 'desktop');
+    for (const v of ['both', 'any', 'WEB', 1, null, {}]) {
+      assert.equal(
+        say({ text: 'x', voiceTo: v })?.voiceTo,
+        undefined,
+        `voiceTo=${JSON.stringify(v)} 应归一成 undefined`,
+      );
+    }
   });
 
   test('清空形态：{ clear: true } → { kind: "clear" }（**空文本表达不了它**）', () => {
@@ -435,5 +449,25 @@ describe('readThrow —— 抛掷指令叶子（角度 + 力度）', () => {
     assert.equal(readThrow({ counter: 1, data: { angle: 45, power: 0 } }), null);
     assert.equal(readThrow({ counter: 1, data: { angle: 45, power: -1 } }), null);
     assert.equal(readThrow({ counter: 1, data: { angle: 45, power: NaN } }), null);
+  });
+});
+
+describe('readSleep —— 睡觉叶子解析（状态不是指令）', () => {
+  test('三种形态：睡着带三段名 / 醒着 / 从未写过', () => {
+    assert.deepEqual(readSleep({ counter: 1, data: { sleeping: true, start: 's', loop: 'l', end: 'e' } }), {
+      sleeping: true,
+      start: 's',
+      loop: 'l',
+      end: 'e',
+    });
+    assert.deepEqual(readSleep({ counter: 1, data: { sleeping: false } }), { sleeping: false });
+    assert.equal(readSleep({ counter: 0, data: null }), null);
+  });
+
+  test('形状非法一律丢弃：缺段名 / 空段名 / 非布尔 sleeping', () => {
+    assert.equal(readSleep({ counter: 1, data: { sleeping: true, start: 's', loop: 'l' } }), null);
+    assert.equal(readSleep({ counter: 1, data: { sleeping: true, start: 's', loop: 'l', end: '' } }), null);
+    assert.equal(readSleep({ counter: 1, data: { sleeping: 'yes' } }), null);
+    assert.equal(readSleep({ counter: 1, data: 'sleeping' }), null);
   });
 });

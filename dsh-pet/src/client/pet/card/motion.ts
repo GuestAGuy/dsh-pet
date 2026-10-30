@@ -5,6 +5,7 @@
  * @module dsh-pet/src/client/pet/card/motion
  */
 import { createFlight, type Flight, type FlightMetrics } from '../motion/flight.ts';
+import { createHaptics, type Haptics } from '../haptics.ts';
 import { createPositionFollow, type PositionFollow } from '../motion/position-follow.ts';
 import { createSquashDriver, type SquashDriver } from '../motion/squash.ts';
 import { createWalk, type Walk } from '../motion/walk.ts';
@@ -149,6 +150,10 @@ export function createCardMotion(rt: CardMotionRuntime) {
     };
 
     const flightRef = useRef<Flight | null>(null);
+    /** 触觉反馈：每张卡一个，冷却状态跟着卡片走；开关实时读配置。 */
+    const hapticsRef = useRef<Haptics | null>(null);
+    hapticsRef.current ??= createHaptics({ enabled: () => cfgRef.current.physics?.hapticEnabled !== false });
+    const haptics = hapticsRef.current;
     flightRef.current ??= createFlight({
       root,
       metrics: () => motionRef.current,
@@ -168,6 +173,9 @@ export function createCardMotion(rt: CardMotionRuntime) {
         // 落地 Q 弹压的是新首帧：等前台视频就位后再压。
         const frontEl = live.current.ownAnim.frontVideo();
         if (frontEl) live.current.squash.start(frontEl, landingSquash(impactVy));
+      },
+      onImpact: (impact) => {
+        haptics.hit(impact.kind, impact.speed);
       },
     });
     const flight = flightRef.current;
