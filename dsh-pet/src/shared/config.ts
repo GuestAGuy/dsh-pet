@@ -33,6 +33,11 @@ export function flattenConfigPets(merged: Record<string, Record<string, unknown>
         font: conf.font as FontConfig | undefined,
         confineToScreen: conf.confineToScreen as boolean | undefined,
         workStatusTexts: conf.workStatusTexts as string[][] | undefined,
+        // 睡觉文案：渲染端要能「睡着时点对话/碎碎念就弹拒绝台词」，所以必须在拍平时带出来
+        // （与 workStatusTexts 同一类条目级字段：多实例共享所属条目那一份）。
+        sleepStartTexts: conf.sleepStartTexts as string[] | undefined,
+        sleepEndTexts: conf.sleepEndTexts as string[] | undefined,
+        sleepRefuseTexts: conf.sleepRefuseTexts as string[] | undefined,
         whisperModel: conf.whisperModel as ModelSelection | undefined,
         chatModel: conf.chatModel as ModelSelection | undefined,
         // 表情包三件套：右键「配图」菜单要按配置里的清单与顺序分组，客户端不读磁盘，

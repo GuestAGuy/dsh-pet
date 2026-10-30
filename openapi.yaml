@@ -941,6 +941,9 @@ paths:
         （`/anim`、`/broadcast`、`/position`、`/throw`、`/bubble/clear`）必须带 `?lock=<lockId>`，
         宠物自己的随机动画 / 自主走位 / 自动碎碎念 / 自动余额 / 工作状态表现全部让路。
 
+        **取锁会先把睡着的宠物叫醒**（锁 = 第三方接管）：`pets.<id>.sleep` 立刻写回 `sleeping: false`，
+        渲染端播一遍「起来」后进入正常动画链；占用期间再次 `POST /sleep` 会回 `locked`。
+
         **取锁会打断正在播的那一次点播**：那一刻前台动画会被暂停，而**解冻不会把它接回来**
         （解冻走的是回 idle / 恢复档位，等于换源顶掉它），所以它确实不会再播完——回执如实报
         `cancelled` + `reason: frozen`，而不是一直挂着 `playing` 让挂 `?wait=ended` 的调用方白等
@@ -1118,6 +1121,66 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+  /dsh-pet-7340/sleep:
+    post:
+      tags: [Action]
+      operationId: putPetToSleep
+      summary: 让桌宠睡下（宿主挑一整套睡觉动画写进叶子）
+      description: |
+        进入睡觉状态。宿主从该条目 `animations.sleep` 里**整套随机**挑一套，三段再各自在候选里
+        随机挑一个，写进 `pets.<id>.sleep` 并随响应回三段名字；渲染端据此播「开始（一次）→
+        循环（无限）」。叫醒走 `POST /wake`，或由用户点击宠物触发。
+
+        睡着期间：宿主跳过自动来源（碎碎念 / 余额 / 待办提醒），并拒绝手动端点（`anim` / `whisper`
+        / `chat` / `balance` / `broadcast` / `bubble/clear` / `menu/click`），拒绝时回
+        `reason: sleeping` 并弹一句条目级 `sleepRefuseTexts` 里的台词。**持锁时让路**：
+        带 `lock=` 的调用不受睡觉限制（锁的语义就是把控制权交给第三方）。
+
+        **幂等**：已经在睡时保持原套、不重播动画，仍回 `ok: true`（`changed: false`）。
+        该条目没配 `animations.sleep` → `ok: false` + `reason: no-sleep-animations`。
+      parameters:
+        - $ref: "#/components/parameters/PetIdQuery"
+        - $ref: "#/components/parameters/LockQuery"
+      responses:
+        "200":
+          description: |
+            恒为 200（除 405）。成功带 `sleeping: true` 与本次选中的 `start` / `loop` / `end`；
+            失败通过 `ok: false` 表达，`reason` 可能是 `bad-request`、`pet-required`、`unknown-pet`、
+            `locked` / `lock-required` / `lock-lost`（占用门禁）、`no-sleep-animations`。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/OkResponse"
+                  - $ref: "#/components/schemas/FailureResponse"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+  /dsh-pet-7340/wake:
+    post:
+      tags: [Action]
+      summary: 叫醒睡着的桌宠
+      operationId: wakePet
+      description: |
+        退出睡觉状态：宿主写 `pets.<id>.sleep = { sleeping: false }`，渲染端播「起来（一次）」后
+        回随机链。**幂等**：本来没睡也回 `ok: true`（`changed: false`）。
+      parameters:
+        - $ref: "#/components/parameters/PetIdQuery"
+        - $ref: "#/components/parameters/LockQuery"
+      responses:
+        "200":
+          description: |
+            恒为 200（除 405）。成功带 `sleeping: false` 与 `changed`（本次是否真的醒来）；
+            失败通过 `ok: false` 表达，`reason` 可能是 `pet-required`、`unknown-pet` 或占用门禁那三个。
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/OkResponse"
+                  - $ref: "#/components/schemas/FailureResponse"
         "405":
           $ref: "#/components/responses/MethodNotAllowed"
 
@@ -2983,6 +3046,8 @@ components:
               unknown-animation,
               unknown-owner,
               unknown-playback,
+              sleeping,
+              no-sleep-animations,
               locked,
               lock-required,
               lock-lost,
@@ -3092,7 +3157,7 @@ components:
           description: 每只宠物各自一份；键是宠物 id（**可含点号，勿切分**）
           additionalProperties:
             type: object
-            required: [say, anim, position, throw, lock]
+            required: [say, anim, position, throw, lock, sleep]
             properties:
               say:
                 $ref: "#/components/schemas/SayLeaf"
@@ -3104,6 +3169,8 @@ components:
                 $ref: "#/components/schemas/ThrowLeaf"
               lock:
                 $ref: "#/components/schemas/LockLeaf"
+              sleep:
+                $ref: "#/components/schemas/SleepLeaf"
       examples:
         typical:
           summary: 一只有余额与碎碎念的宠物
@@ -3636,6 +3703,62 @@ components:
             - $ref: "#/components/schemas/SayClear"
             - type: "null"
 
+    SleepLeaf:
+      type: object
+      required: [counter, data]
+      properties:
+        counter:
+          $ref: "#/components/schemas/Counter"
+        data:
+          description: |
+            该宠物的**睡觉状态**；`null` = 从未写过（视为醒着）。由 `POST /sleep` / `POST /wake` 写入。
+
+            **三段动画名由宿主挑定后一起写进叶子**（外层整套随机、段内再随机），渲染端照此播
+            「开始（一次）→ 循环（无限）→ 起来（一次）」，不自己重新挑——否则两端会播到不同的一套。
+
+            **这是状态不是指令**：渲染端读它决定「要不要睡」。睡着时随机链、自动来源（碎碎念 /
+            余额 / 工作状态 / 待办提醒）与手动触发（说话 / 聊天 / 点播动画）一律按睡觉处理；
+            可拖拽但保持睡姿。宿主侧同样据此跳过自动循环并拒绝接口。
+          oneOf:
+            - $ref: "#/components/schemas/SleepState"
+            - type: "null"
+
+    SleepState:
+      description: 睡觉状态的两种形态，由 `sleeping` 字段区分。
+      oneOf:
+        - $ref: "#/components/schemas/SleepOn"
+        - $ref: "#/components/schemas/SleepOff"
+
+    SleepOn:
+      type: object
+      required: [sleeping, start, loop, end]
+      description: 正在睡：三段动画名由宿主选定。
+      properties:
+        sleeping:
+          type: boolean
+          const: true
+        start:
+          type: string
+          description: 入睡过渡（播一次）。
+          example: 睡觉-开始
+        loop:
+          type: string
+          description: 睡眠循环（无限播，不触发 ended）。
+          example: 睡觉-循环
+        end:
+          type: string
+          description: 醒来过渡（播一次）；播完回随机链。
+          example: 睡觉-起来
+
+    SleepOff:
+      type: object
+      required: [sleeping]
+      description: 醒着（含刚被叫醒）。
+      properties:
+        sleeping:
+          type: boolean
+          const: false
+
     LockLeaf:
       type: object
       required: [counter, data]
@@ -4070,3 +4193,5 @@ components:
         removed:
           type: integer
           description: 删掉的条数；0 = 本来就没有（幂等）
+
+

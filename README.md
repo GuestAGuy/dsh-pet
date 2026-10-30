@@ -51,6 +51,7 @@ AI 生成动画的配方     源视频 → 透明动画的管线    运行在 DS
 - **余额展示**：内置常见服务商的余额 / 额度查询，按剩余额度分档播动画并弹气泡；也可以登记自己的服务商。
 - **工作状态联动**：跟随 DSH 会话状态切档位动画，并在头顶常驻一句话。
 - **待办事项**：一句话加可选到期时间，清单挂在宠物头顶；越临近到期提醒越密，由宠物说出来。
+- **睡觉**：右键「睡觉」让它睡下，点一下或右键「起来」叫醒；睡着时完全安静——随机动作、碎碎念、余额、待办与工作状态都不打扰，还会按周期说梦话；睡姿可用 `animations.sleep` 配多套（蹲着睡、趴着睡…）。
 - **系统通知**：任务完成或需要确认时弹系统通知，点一下回到对应会话。
 - **右键菜单**：换动画、开聊、回到原位、打开 DSH / 网站、重载配置。
 - **其他**：点击音效、系统托盘与每只宠物的显示位置。
@@ -265,6 +266,14 @@ AI 生成动画的配方     源视频 → 透明动画的管线    运行在 DS
   <img src="dsh-pet/assets/preview/gongzuozhuangtai-yuandi-duobu-zhangwang.gif" width="160" alt="工作状态-原地踱步张望" title="工作状态-原地踱步张望">
   <img src="dsh-pet/assets/preview/gongzuozhuangtai-queyue-qingzhu.gif" width="160" alt="工作状态-雀跃庆祝" title="工作状态-雀跃庆祝">
   <img src="dsh-pet/assets/preview/gongzuozhuangtai-chuitou-tanqi-maohan.gif" width="160" alt="工作状态-垂头叹气冒汗" title="工作状态-垂头叹气冒汗">
+</p>
+
+**睡觉**（右键「睡觉」或鼠标停上去按 `S`；睡着时点一下叫醒）
+
+<p>
+  <img src="dsh-pet/assets/preview/shuijiao-kaishi.gif" width="160" alt="睡觉-开始" title="睡觉-开始">
+  <img src="dsh-pet/assets/preview/shuijiao-xunhuan.gif" width="160" alt="睡觉-循环" title="睡觉-循环">
+  <img src="dsh-pet/assets/preview/shuijiao-qilai.gif" width="160" alt="睡觉-起来" title="睡觉-起来">
 </p>
 
 > 注：动画为透明背景；GIF 预览中透明部分显示为页面底色，实际 webm 播放为透明。

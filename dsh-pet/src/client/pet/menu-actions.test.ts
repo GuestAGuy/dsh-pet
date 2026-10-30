@@ -160,3 +160,79 @@ describe('createMenuActions —— 配图碎碎念', () => {
     assert.doesNotMatch(captured.urls[0] ?? '', /image=/, '没点名具体图就不该带 image 参数');
   });
 });
+
+describe('createMenuActions —— 睡觉闸门（渲染端拒绝）', () => {
+  test('睡着时点对话：只弹拒绝台词，不打开弹窗', () => {
+    const { actions, calls } = harness({
+      sleeping: () => true,
+      say: (text) => calls.push('say:' + text),
+      sleepRefuseTexts: () => ['我在睡觉'],
+    });
+    actions.run({ label: '对话', action: 'chat' } as MenuLeaf);
+    assert.deepEqual(calls, ['say:我在睡觉']);
+  });
+
+  test('睡着时点待办 / 余额同样被拒', () => {
+    const { actions, calls } = harness({
+      sleeping: () => true,
+      say: (text) => calls.push('say:' + text),
+      sleepRefuseTexts: () => ['别吵'],
+    });
+    actions.run({ label: '待办事项', action: 'todo' } as MenuLeaf);
+    actions.run({ label: '查看余额', action: 'show-balance' } as MenuLeaf);
+    assert.deepEqual(calls, ['say:别吵', 'say:别吵']);
+  });
+
+  test('睡觉 / 起来 / 维护类照常放行', () => {
+    const { actions, calls } = harness({
+      sleeping: () => true,
+      say: () => calls.push('say'),
+      sleepRefuseTexts: () => ['别吵'],
+    });
+    actions.run({ label: '回到初始位置', action: 'home' } as MenuLeaf);
+    assert.deepEqual(calls, ['stopThrow', 'stopMove', 'resetPosition']);
+  });
+
+  test('醒着时拒绝逻辑完全不动（对话照旧走 openChat）', () => {
+    const { actions, calls } = harness({ sleeping: () => false, say: () => calls.push('say') });
+    actions.run({ label: '对话', action: 'chat' } as MenuLeaf);
+    assert.deepEqual(calls, ['openChat']);
+  });
+});
+
+describe('createMenuActions —— 持锁时睡觉闸门让路', () => {
+  test('睡着但持锁：动作照常执行（锁的语义是把控制权交给第三方）', () => {
+    const { actions, calls } = harness({
+      sleeping: () => true,
+      locked: () => true,
+      say: (text) => calls.push('say:' + text),
+      sleepRefuseTexts: () => ['别吵'],
+    });
+    actions.run({ label: '对话', action: 'chat' } as MenuLeaf);
+    assert.deepEqual(calls, ['openChat']);
+  });
+
+  test('睡着且未持锁：仍然拒绝', () => {
+    const { actions, calls } = harness({
+      sleeping: () => true,
+      locked: () => false,
+      say: (text) => calls.push('say:' + text),
+      sleepRefuseTexts: () => ['别吵'],
+    });
+    actions.run({ label: '对话', action: 'chat' } as MenuLeaf);
+    assert.deepEqual(calls, ['say:别吵']);
+  });
+});
+
+describe('createMenuActions —— 宿主指令不按「用户点击」判睡觉', () => {
+  test('睡着且未持锁，但来自 pets.anim 的宿主指令：照常播放（放行由宿主闸门决定）', () => {
+    const { actions, calls } = harness({
+      sleeping: () => true,
+      locked: () => false,
+      say: (text) => calls.push('say:' + text),
+      sleepRefuseTexts: () => ['别吵'],
+    });
+    actions.run({ anim: 'idle1', label: 'idle1' } as MenuLeaf, undefined, false, true);
+    assert.deepEqual(calls, ['stopMove', 'playOnce:idle1:null']);
+  });
+});

@@ -165,6 +165,55 @@ describe('readAllConfig —— events 缺失仍回退默认（既有行为不回
   });
 });
 
+describe('readAllConfig —— animations.sleep（可选段）校验', () => {
+  /** 用给定 sleep 覆盖内置默认的 animations，读回成品里 main 条目的 animations */
+  function mergedAnimations(sleep: unknown): Record<string, unknown> {
+    const animations = sleep === undefined ? BASE.animations : { ...BASE.animations, sleep };
+    return readAllConfig(withBase({}, { animations })).main.animations as Record<string, unknown>;
+  }
+
+  test('合法的一整套原样保留（start / loop / end 三个候选数组）', () => {
+    const sleep = [{ start: ['蹲-开始'], loop: ['蹲-循环'], end: ['蹲-起来'] }];
+    assert.deepEqual(mergedAnimations(sleep).sleep, sleep);
+  });
+
+  test('不写 sleep：合法，该条目只是没有睡觉功能（其余动画不受影响）', () => {
+    const anim = mergedAnimations(undefined);
+    assert.equal(anim.sleep, undefined);
+    assert.deepEqual(anim.idle, BASE.animations.idle);
+  });
+
+  test('非法形态整段回退默认：空套数组 / 空段 / 缺段 / 空串成员 / 非字符串成员 / 非数组', () => {
+    const bad: unknown[] = [
+      [],
+      [{ start: [], loop: ['蹲-循环'], end: ['蹲-起来'] }],
+      [{ start: ['蹲-开始'], loop: ['蹲-循环'] }],
+      [{ start: ['蹲-开始'], loop: ['蹲-循环'], end: [''] }],
+      [{ start: ['蹲-开始'], loop: ['蹲-循环'], end: [1] }],
+      'sleep',
+    ];
+    for (const sleep of bad) {
+      assert.deepEqual(mergedAnimations(sleep), BASE.animations, `非法 sleep 必须整段回退：${JSON.stringify(sleep)}`);
+    }
+  });
+
+  test('种类文件自己写 animations 但不写 sleep：合法，只是该种类没有睡觉功能', () => {
+    const paths = withBase({});
+    mkdirSync(paths.petDir, { recursive: true });
+    writeFileSync(
+      join(paths.petDir, 'pig-config.json'),
+      JSON.stringify({
+        pets: [{ id: 'pig1', name: '猪', display: 'web' }],
+        animations: BASE.animations,
+        animationWeights: BASE.animationWeights,
+      }),
+    );
+    const pig = readAllConfig(paths).pig.animations as Record<string, unknown>;
+    assert.equal(pig.sleep, undefined);
+    assert.deepEqual(pig.idle, BASE.animations.idle, '没写 sleep 不得让整份 animations 失效');
+  });
+});
+
 /** 跑一趟 readAllConfig：base 为内置默认（可注入表情包开关），overlay 为用户层 */
 function withBase(baseExtra: Record<string, unknown>, overlay?: Record<string, unknown>): ConfigPaths {
   const dir = mkdtempSync(join(tmpdir(), 'dsh-pet-config-test-'));

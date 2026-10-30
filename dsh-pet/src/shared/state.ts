@@ -117,7 +117,7 @@ export function takeChanged(s: PollState, baseline: Record<string, number>): Sta
 export type SectionLeafName = 'config' | 'balance' | 'workStatus' | 'notify' | 'menu';
 
 /** `pets.<id>.<名>` 里会被消费端分发的那几个叶子。 */
-export type PetLeafName = 'say' | 'anim' | 'position' | 'throw' | 'lock';
+export type PetLeafName = 'say' | 'anim' | 'position' | 'throw' | 'lock' | 'sleep';
 
 /** 一次叶子分发的落点：分段叶子，或某只宠物的叶子。 */
 export type LeafTarget =
@@ -127,7 +127,7 @@ export type LeafTarget =
 const SECTION_LEAF_NAMES = ['config', 'balance', 'workStatus', 'notify', 'menu'] as const;
 
 /** 宠物叶子名的全集；新增宠物叶子时与 {@link PetLeafName} 一起改。 */
-const PET_LEAF_NAMES = ['say', 'anim', 'position', 'throw', 'lock'] as const;
+const PET_LEAF_NAMES = ['say', 'anim', 'position', 'throw', 'lock', 'sleep'] as const;
 
 /** 把字符串收窄成分段叶子名。 */
 function isSectionLeafName(name: string): name is SectionLeafName {
@@ -279,6 +279,27 @@ export function readLock(leaf: StateLeaf): LockState | null {
   // locked:true 却缺 expiresAt（或非法）= 形状非法：宁可不冻结，也不猜一个到期时刻
   if (typeof d.expiresAt !== 'number' || !Number.isFinite(d.expiresAt)) return null;
   return { locked: true, expiresAt: d.expiresAt };
+}
+
+/** 睡觉叶子的形态：`{ sleeping: true, start, loop, end }` = 正在睡（三段名由宿主挑定），
+ *  `{ sleeping: false }` = 醒着。 */
+export type SleepState = { sleeping: true; start: string; loop: string; end: string } | { sleeping: false };
+
+/** 类型收窄：睡觉叶子 → SleepState（形状非法 → null，消费端跳过这一拍）。
+ *
+ *  这是状态不是指令：渲染端读它决定要不要睡，不往回写。三段名字由宿主挑定并一起写进叶子，
+ *  渲染端照此播「开始（一次）→ 循环（无限）→ 起来（一次）」——自己重新挑会让两端播到不同的一套。
+ *  `sleeping: true` 却缺任何一段名 = 形状非法：宁可不睡（保持现状），也不要播一段不存在的动画。
+ */
+export function readSleep(leaf: StateLeaf): SleepState | null {
+  if (!leaf.data || typeof leaf.data !== 'object') return null;
+  const d = leaf.data as { sleeping?: unknown; start?: unknown; loop?: unknown; end?: unknown };
+  if (d.sleeping === false) return { sleeping: false };
+  if (d.sleeping !== true) return null;
+  for (const name of [d.start, d.loop, d.end]) {
+    if (typeof name !== 'string' || name === '') return null;
+  }
+  return { sleeping: true, start: d.start as string, loop: d.loop as string, end: d.end as string };
 }
 
 /** 位置指令的运动模式（三选一）。与宿主半侧的同名联合体是两份，改动时两边要一起改。 */

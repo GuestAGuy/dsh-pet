@@ -99,6 +99,11 @@ Object.assign(PetSprite.prototype, {
     // （宿主侧过期是懒判的，不会推「锁没了」）。
     this.frozen = false;
     this.lockTimer = null;
+    // 睡觉：sleeping = 此刻处于睡觉态（含「起来」那段过渡），sleepSet = 宿主挑定的三段名，
+    // sleepPhase = 当前段（start / loop / end）。阶段由 handleEnded 推进——视频播完只有渲染端知道。
+    this.sleeping = false;
+    this.sleepSet = null;
+    this.sleepPhase = null;
     // 对话弹窗：当前挂载的 close() 句柄 + 开启标记。chatOpen 是穿透守卫——弹窗是窗口内 DOM，
     // 期间整窗保持可交互，否则光标移到输入框就会被 onMouseMove 翻回穿透、点击全被透传。
     this.chatClose = null;

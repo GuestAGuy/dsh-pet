@@ -45,6 +45,15 @@ export type EventSlot = string | string[];
 /** 事件动画：事件名 → 档位槽位数组（数组顺序即档位顺序；不进随机链，只由代码显式触发）。 */
 export type Events = Record<string, EventSlot[]>;
 
+/** 一套睡觉动作：入睡 → 循环 → 醒来。
+ *  三段各是候选数组（进入该段时随机抽一个）；整套由 animations.sleep 的外层数组随机挑选，
+ *  三段必须来自同一套，否则会出现「蹲着入睡、趴着醒来」。 */
+export interface SleepSet {
+  start: string[];
+  loop: string[];
+  end: string[];
+}
+
 /** 动画权重。 */
 export interface Weights {
   idle: number;
@@ -61,6 +70,9 @@ export interface Animations {
   moves: MovesConfig;
   categories: Category[];
   events: Events;
+  /** 睡觉动作套（可选）：没写 = 该条目没有睡觉功能，右键菜单不出现「睡觉」。
+   *  写了就「整套随机 → 段内随机」取，结构见 {@link SleepSet}。 */
+  sleep?: SleepSet[];
 }
 
 /** 一只宠物（与 config.jsonc 的 pets[i] 同形，position 嵌套）。
@@ -104,6 +116,12 @@ export interface Pet {
   physics?: PhysicsParams;
   /** 全局默认：是否锁定在当前屏幕——抛掷与自主漫游都只在当前所在那块屏内活动 */
   confineToScreen?: boolean;
+  /** 条目级：睡觉期间被手动打扰时弹的拒绝台词（非空字符串数组，随机挑一句）。 */
+  sleepRefuseTexts?: string[];
+  /** 条目级：入睡时弹的台词（播「开始」时随机挑一句）。 */
+  sleepStartTexts?: string[];
+  /** 条目级：醒来时弹的台词（播「起来」时随机挑一句）。 */
+  sleepEndTexts?: string[];
   /** 条目级：工作状态气泡文案（外层索引 = 档位 0..5，内层每档可多句随机抽）。
    *  整字段缺失 = 不弹工作状态文本，只播动画。 */
   workStatusTexts?: string[][];

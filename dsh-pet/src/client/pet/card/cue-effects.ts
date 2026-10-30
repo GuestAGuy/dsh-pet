@@ -94,7 +94,7 @@ export function createCueEffects(rt: CueEffectsRuntime) {
       if (balanceNoticeTick === 0 || balanceNoticeTick === prevNoticeRef.current) return;
       prevNoticeRef.current = balanceNoticeTick;
       // 占用锁：自动来源不看，手动请求照常。
-      if (hub.ownAnim.isFrozen() && !balanceManual) return;
+      if ((hub.ownAnim.isFrozen() || hub.sleeping()) && !balanceManual) return;
       if (!balance || balance.ok) return;
       hub.bubbles.showBalance();
     };
@@ -109,6 +109,8 @@ export function createCueEffects(rt: CueEffectsRuntime) {
       // 占用锁：工作状态是自动来源，锁生效时不响应；解冻时由冻结驱动重新对齐当前状态。
       // 不挡宿主写入：sections.workStatus 是所有宠物共用一份，按宠物在渲染端忽略。
       if (hub.ownAnim.isFrozen()) return;
+      // 睡觉：同样不响应工作状态（不换动画、不弹文案）；醒来后由下一次状态变化重新对齐
+      if (hub.sleeping()) return;
       if (!workStatus || workStatus.state === null) {
         log('pet=' + cfg.id + ' ' + (prevWorkStateRef.current ?? 'null') + '->null    播完即停（回待机，收起气泡）');
         prevWorkStateRef.current = null;

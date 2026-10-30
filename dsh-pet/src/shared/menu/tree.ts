@@ -8,6 +8,15 @@
 import { type Animations, type Category } from '../types.ts';
 import type { MenuBranch, MenuLeaf, MenuMoreItem, MenuNode } from './types.ts';
 
+/** 睡着时仍然放行的菜单动作：维护类、「叫醒它」本身，以及第三方菜单项。
+ *  第三方要做什么由它自己决定——真去驱动宠物时会带占用锁调接口，宿主闸门在那一层再判
+ *  （锁优先）。在渲染端先拦掉，等于让「更多」里的第三方入口在睡觉时整体失效。 */
+const SLEEP_ALLOWED_ACTIONS: readonly string[] = ['sleep', 'wake', 'home', 'set-display', 'reload', 'third-party'];
+
+/** 该菜单动作在睡着时是否放行（两端共用：对话弹窗、待办面板、动作点播都是渲染端行为，宿主闸门拦不到）。 */
+export const isSleepAllowedAction = (action: string | undefined): boolean =>
+  action !== undefined && SLEEP_ALLOWED_ACTIONS.includes(action);
+
 /** 「显示位置」子菜单：两端注入同一份，文案与设置页的显示位置下拉框一致。
  *  两端各写一份必然漂移，而这一项语义对称：桌面端用它把宠物送走，浏览器端用它送到桌面。
  *  「都不」是单向门（恢复入口是设置页），其余三个值都能从某一端改回来。 */

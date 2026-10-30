@@ -56,8 +56,8 @@ export function apply(ctx: any): void {
     workStatus,
   });
   const { reportDownload, stopDownloadSlotTimer } = downloadReport;
-  const petLookup = createPetLookup({ state });
-  const { lock } = petLookup;
+  const petLookup = createPetLookup({ state, configPaths });
+  const { lock, sleep, sleepRefusalText } = petLookup;
   const sessionNotify = createSessionNotify({ ctx, publishWorkStatus, state, workStatus });
   const {
     pushNotifyFrame,
@@ -72,7 +72,7 @@ export function apply(ctx: any): void {
     scheduleCompletionNotify,
   } = sessionNotify;
   const chatMemory = createChatMemory({ ctx, configPaths, log, memeDirsFor, state, userRoot });
-  const { lastWhisperAt, publishWhisper, chatWithPet, getActivePetId, setActivePetId } = chatMemory;
+  const { lastWhisperAt, publishWhisper, publishSleepTalk, chatWithPet, getActivePetId, setActivePetId } = chatMemory;
 
   const balancePoll = createBalancePoll({ ctx, configPaths, getActivePetId, log, state });
   const { effectivePetList, balancePeriodSec, whisperPeriodSec, refreshBalance, resolveActivePetId, petDisplayName } =
@@ -125,7 +125,7 @@ export function apply(ctx: any): void {
     workStatus,
   });
 
-  registerBalanceCommand({ ctx, refreshBalance });
+  registerBalanceCommand({ ctx, effectivePetList, refreshBalance, sleep, sleepRefusalText });
 
   registerLoops({
     ctx,
@@ -135,14 +135,16 @@ export function apply(ctx: any): void {
     lock,
     log,
     publishWhisper,
+    publishSleepTalk,
     refreshBalance,
+    sleep,
     standaloneAiPolicy,
     whisperPeriodSec,
   });
 
   registerPetCommand({ ctx, effectivePetList, petDisplayName, resolveActivePetId, setActivePetId });
 
-  registerChatCommand({ ctx, chatWithPet, log, publishWhisper, resolveActivePetId });
+  registerChatCommand({ ctx, chatWithPet, log, publishWhisper, resolveActivePetId, sleep, sleepRefusalText });
 
   // 待办提醒：随插件生命周期起停；锁被第三方持有时由 pickReminderSpeaker 跳过该宠物。
   // 播报开关现读现用：改配置后下一次提醒即生效，不必重启。
@@ -152,6 +154,7 @@ export function apply(ctx: any): void {
     isVoiceTodoEnabled: () => readAllConfig(configPaths).main?.voiceTodoEnabled === true,
     lock,
     log,
+    sleep,
     state,
     todos,
     waiterCount: () => state.waiterCount(),

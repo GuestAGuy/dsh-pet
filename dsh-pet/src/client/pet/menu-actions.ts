@@ -4,7 +4,7 @@
  * 依赖以取值函数注入，避免捕获渲染期的状态快照。
  * @module dsh-pet/src/client/pet/menu-actions
  */
-import { isNoMirrorAnimation } from '../../shared/menu.ts';
+import { isNoMirrorAnimation, isSleepAllowedAction } from '../../shared/menu.ts';
 import type { MenuLeaf } from '../../shared/menu.ts';
 import { ROUTE_PATH } from '../../shared/constants.ts';
 import type { Animations } from '../../shared/types.ts';
@@ -41,7 +41,17 @@ export interface MenuActionDeps {
   applyMerged: (merged: Record<string, Record<string, unknown>>) => void;
   /** 动作失败时打一行告警（文案自带原因）。 */
   warn: (message: string) => void;
+  /** 是否在睡：睡着时任何「打扰类」动作只弹拒绝台词、不执行。缺省视为醒着。 */
+  sleeping?: () => boolean;
+  /** 是否被占用锁冻结：锁的语义是把控制权交给第三方，此时睡觉闸门让路。缺省视为未持锁。 */
+  locked?: () => boolean;
+  /** 弹一句气泡（拒绝台词用，不换动画）。缺省 = 不弹。 */
+  say?: (text: string) => void;
+  /** 睡觉拒绝台词池（条目级配置）。缺省 = 静默拒绝，不弹文字。 */
+  sleepRefuseTexts?: () => string[];
 }
+
+/** 睡着时仍然放行的菜单动作由 shared/menu 的 isSleepAllowedAction 判定（两端共用一份）。 */
 
 /** 菜单动作派发器。 */
 export interface MenuActions {
@@ -51,8 +61,10 @@ export interface MenuActions {
    * @param leaf - 菜单叶子：内置动作或一个待点播的动画。
    * @param playbackId - 本次点播编号；自播动画不传。
    * @param keepFacing - 跳过「文字类强制朝左」的镜像修正，显式朝向优先。
+   * @param hostInstruction - 这条是宿主写进 `pets.<id>.anim` 的显式指令（不是用户点菜单）：
+   *  渲染端不判睡觉，放不放行由宿主闸门按「锁优先」决定。
    */
-  run: (leaf: MenuLeaf, playbackId?: string, keepFacing?: boolean) => void;
+  run: (leaf: MenuLeaf, playbackId?: string, keepFacing?: boolean, hostInstruction?: boolean) => void;
 }
 
 /** 显示位置：写配置后宿主回成品聚合，交给容器重渲染。 */
@@ -92,7 +104,22 @@ export function createMenuActions(deps: MenuActionDeps): MenuActions {
       .catch((error: unknown) => deps.warn('[dsh-pet] ' + label + '异常 pet=' + petId + ' ' + String(error)));
   };
 
-  const run = (leaf: MenuLeaf, playbackId?: string, keepFacing = false): void => {
+  const run = (leaf: MenuLeaf, playbackId?: string, keepFacing = false, hostInstruction = false): void => {
+    // 睡觉：打扰类动作在点击这一刻就拒绝——弹一句台词，什么都不执行。
+    // 放在最前面是有意的：对话弹窗、待办面板、动作点播都是纯前端行为，宿主闸门拦不到它们。
+    // hostInstruction：宿主写进 pets.<id>.anim 的显式指令（第三方带锁点播 / 外部驱动）不在此判——
+    // 该不该放行由宿主闸门按「锁优先」决定；渲染端再拦一次会输给叶子到达的时序差。
+    if (
+      !hostInstruction &&
+      deps.sleeping?.() === true &&
+      deps.locked?.() !== true &&
+      !isSleepAllowedAction(leaf.action)
+    ) {
+      const pool = deps.sleepRefuseTexts?.() ?? [];
+      const text = pool[Math.floor(Math.random() * pool.length)];
+      if (text !== undefined) deps.say?.(text);
+      return;
+    }
     if (leaf.action === 'third-party') {
       // 第三方菜单项只上报 owner、label 与当前宠物 id，具体动作由注册方查询。
       const owner = leaf.owner ?? '';
@@ -103,6 +130,13 @@ export function createMenuActions(deps: MenuActionDeps): MenuActions {
           deps.warn('[dsh-pet] 第三方菜单点击上报失败 ' + String(error)),
         );
       }
+      return;
+    }
+    if (leaf.action === 'sleep' || leaf.action === 'wake') {
+      // 睡觉/起来都由宿主定状态：渲染端只发意图，三段动画名与闸门都在宿主那一侧
+      const route = leaf.action === 'sleep' ? '/sleep' : '/wake';
+      console.info('[dsh-pet] 菜单' + (leaf.action === 'sleep' ? '睡觉' : '起来') + ' pet=' + petId);
+      fireAction(ROUTE_PATH + route + '?pet=' + encodeURIComponent(petId), leaf.action === 'sleep' ? '睡觉' : '起来');
       return;
     }
     if (leaf.action === 'show-balance') {

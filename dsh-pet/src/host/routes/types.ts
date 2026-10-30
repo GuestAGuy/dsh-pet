@@ -15,6 +15,7 @@ import type { FileLogger } from '../log-file.ts';
 import type { MenuRegistry } from '../menu.ts';
 import type { PlaybackStore } from '../playback.ts';
 import type { PoseStore } from '../pose.ts';
+import type { SleepStore } from '../sleep.ts';
 import type { PollStateStore } from '../state.ts';
 import type { VoiceTarget } from '../surface.ts';
 import type { TodoStore } from '../todo/store.ts';
@@ -101,6 +102,10 @@ export interface PetRouteDeps {
   readonly userRoot: string;
   /** 占用锁。 */
   readonly lock: LockStore;
+  /** 睡觉状态（进睡 / 醒来由 /sleep 与 /wake 驱动）。 */
+  readonly sleep: SleepStore;
+  /** 睡觉闸门：在睡且未持锁时拒绝并弹拒绝台词；放行回 null。 */
+  readonly sleepBlocked: (petId: string, params: URLSearchParams) => RouteResult | null;
   /** 插件日志出口（文件 + 终端）。 */
   readonly log: FileLogger;
   /** 宿主上下文的最小结构：路由只用到 logger 与 llm 服务。 */

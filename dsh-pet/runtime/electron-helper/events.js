@@ -27,7 +27,8 @@ PetSprite.prototype.onWorkTick = function onWorkTick(snapshot, tick) {
     // 回空闲：把正在循环播的进行中档位动画改成「播完即停」。进行中档位走 switchTo(name, false)
     // （loop=true、onended=null），ended 永不触发；这里不切动画，链就拿不到推进信号，
     // 宠物会卡在那段工作动画上。只改当前段：它结束后走 handleEnded → playIdle。
-    if (S.poolIncludes(this.animations.events?.workStatus ?? [], this.anim)) {
+    // 睡觉时前台那段是睡姿循环：改掉它的 loop/onended 会既打断睡姿又把随机链拽回来，跳过。
+    if (!this.sleeping && S.poolIncludes(this.animations.events?.workStatus ?? [], this.anim)) {
       const frontEl = this.front === 0 ? this.videoA : this.videoB;
       if (frontEl) {
         frontEl.loop = false;
@@ -87,6 +88,8 @@ PetSprite.prototype.onWorkTick = function onWorkTick(snapshot, tick) {
       : null; // 非终态：常驻，不设自动收起
   }
   this.renderBubble();
+  // 睡觉：气泡与 workState 已经更新，动画不换——自动来源不该打断睡姿（睡姿循环归睡觉状态机）。
+  if (this.sleeping) return;
   // 循环语义：终态播一遍回 idle；非终态多候选档位播一遍 → ended 轮换到下一候选；
   // 非终态单候选档位无限循环。
   const rotating = !terminal && Array.isArray(slot) && slot.length > 1;
@@ -169,7 +172,8 @@ PetSprite.prototype.showWhisper = function showWhisper(text, image, url, duratio
       (image ? ' [' + image + ']' : ''),
   );
   // 先起动画：它与气泡时长是两个独立参数（duration=0 时动画照播、只是不弹泡）
-  if (name !== null) {
+  // 睡觉：气泡照弹（拒绝台词就是这么来的），动画不换——自动来源不该打断睡姿（睡姿循环归睡觉状态机）。
+  if (name !== null && !this.sleeping) {
     this.stopMove();
     this.playOnce(name);
   }
@@ -207,6 +211,8 @@ PetSprite.prototype.showBalanceNow = function showBalanceNow(state, manual) {
     this.renderBubble();
   }, BUBBLE_DURATION_MS);
   // 档位动画：开关关闭的宠物不演；没有百分比语义（纯余额金额）也没有档位可映射
+  // 睡觉：气泡已经亮起，动画不换——自动来源不该打断睡姿（睡姿循环归睡觉状态机）。
+  if (this.sleeping) return;
   if (!this.pet.balanceEnabled) return;
   if (p === undefined) return;
   const pool = this.animations.events?.balance;
@@ -275,7 +281,8 @@ function applyBalanceLeaf(leaf) {
   window.__dshPetDebug.lastBalanceOk = hit.state && hit.state.ok === true;
   if (hit.state.ok) {
     balanceTick++;
-    for (const s of sprites) s.onBalanceTick(hit.state, balanceTick, hit.manual);
+    // 睡着不看不听：余额是自动来源，档位动画与气泡都不更新（手动请求已被宿主拦在门外）
+    for (const s of sprites) if (!s.sleeping) s.onBalanceTick(hit.state, balanceTick, hit.manual);
   } else {
     // 不可用：manual（用户主动要的）一律弹，周期刷新只在原因变化时弹一次
     applyBalanceNotice(hit.state, hit.manual);
@@ -300,7 +307,8 @@ function applyWorkStatusLeaf(leaf) {
   const snap = S.toWorkStatus(leaf.data);
   if (!snap) return;
   workTick++;
-  for (const s of sprites) s.onWorkTick(snap, workTick);
+  // 睡着不看不听：自动来源的工作状态整条跳过（动画与气泡都不更新），醒来后的下一次状态变化重新对齐
+  for (const s of sprites) if (!s.sleeping) s.onWorkTick(snap, workTick);
 }
 
 /** 点播动画叶子 → 对应宠物播该动画。
@@ -316,7 +324,7 @@ function applyAnimLeaf(petId, leaf) {
     if (explicitFacing) s.facing = hit.facing; // 必须在换源前：switchTo 里按它贴 scaleX(-1)
     if (hit.url !== undefined) s.playUrlOnce(hit.url, hit.playbackId);
     else if (hit.name !== undefined)
-      s.onMenuAction({ label: hit.name, anim: hit.name, playbackId: hit.playbackId }, explicitFacing);
+      s.onMenuAction({ label: hit.name, anim: hit.name, playbackId: hit.playbackId }, explicitFacing, true);
   }
 }
 
@@ -348,6 +356,28 @@ function applyLockLeaf(petId, leaf) {
   }
 }
 
+/** 睡觉叶子 → 对应宠物进睡/醒来。它同样是状态而不是指令：三段名由宿主挑定，sprite 只照播并
+ *  自己推进「开始（一次）→ 循环（无限）→ 起来（一次）」——视频播完只有渲染端知道。 */
+function applySleepLeaf(petId, leaf) {
+  const data = leaf && leaf.data;
+  if (!data || typeof data !== 'object') return;
+  let state;
+  if (data.sleeping === false) {
+    state = { sleeping: false };
+  } else if (data.sleeping === true) {
+    // sleeping: true 却缺任何一段名 = 形状非法：宁可不睡（保持现状），也不播一段不存在的动画
+    for (const key of ['start', 'loop', 'end']) {
+      if (typeof data[key] !== 'string' || data[key] === '') return;
+    }
+    state = { sleeping: true, start: data.start, loop: data.loop, end: data.end };
+  } else {
+    return; // 不认识的取值（老宿主 / 脏数据）：跳过这一拍
+  }
+  for (const s of sprites) {
+    if (s.pet.id === petId) s.setSleep(state);
+  }
+}
+
 /** 第三方菜单快照叶子 → 灌进各宠物（右键菜单据此拼「更多」）。它是当前状态、不是事件，
  *  注册与覆盖时写一次，所有窗口共用同一份快照。 */
 function applyMenuLeaf(leaf) {
@@ -371,6 +401,11 @@ async function pollStateOnce() {
       stateBaseline = S.flattenCounters(s); // 首拉：只记基线，不渲染（避免启动/重载时重放旧气泡）
       // 第三方菜单项是状态而不是事件：首拉就要装上，否则 helper 重启后要等下次注册才出现
       applyMenuLeaf(s.sections ? s.sections.menu : null);
+      // 睡觉同样是状态：helper 重启 / 重载配置后宿主仍记着它在睡，这里必须补一次；
+      // 否则渲染端显示醒着，而宿主因「已在睡」不回写叶子，只能等宿主重启才恢复。
+      for (const [petId, entry] of Object.entries((s && s.pets) || {})) {
+        if (entry && entry.sleep && entry.sleep.data !== null) applySleepLeaf(petId, entry.sleep);
+      }
       return true;
     }
     for (const change of S.takeChanged(s, stateBaseline)) {
@@ -393,6 +428,9 @@ async function pollStateOnce() {
       } else if (change.path.startsWith('pets.') && change.path.endsWith('.lock')) {
         // 占用锁：同上切片，绝不 split('.')。它是状态而不是指令（见 applyLockLeaf）
         applyLockLeaf(change.path.slice('pets.'.length, -'.lock'.length), change.leaf);
+      } else if (change.path.startsWith('pets.') && change.path.endsWith('.sleep')) {
+        // 睡觉：同上切片。它是状态而不是指令（见 applySleepLeaf）
+        applySleepLeaf(change.path.slice('pets.'.length, -'.sleep'.length), change.leaf);
       }
     }
     return true;

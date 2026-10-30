@@ -48,7 +48,28 @@ function animationsValid(a: unknown): boolean {
     }
   }
   const balance = evEntries.balance;
-  return Array.isArray(balance) && balance.length > 0;
+  if (!Array.isArray(balance) || balance.length === 0) return false;
+  // sleep 可选：pet pack 不写也合法（不同角色的睡觉素材不一样，不能强求）。
+  // 写了才校验形状——一个空套或空段会让状态机「进去了但没动画播」，比不配更难解释。
+  return anims.sleep === undefined || sleepValid(anims.sleep);
+}
+
+/** sleep 段校验：非空套数组，每套都必须有非空的 start / loop / end 字符串数组。
+ *  未写由调用方放行（可选字段）；这里只处理「写了」的形态。 */
+function sleepValid(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  for (const set of value) {
+    if (!set || typeof set !== 'object' || Array.isArray(set)) return false;
+    const entry = set as Record<string, unknown>;
+    for (const phase of ['start', 'loop', 'end']) {
+      const pool = entry[phase];
+      if (!Array.isArray(pool) || pool.length === 0) return false;
+      for (const name of pool) {
+        if (typeof name !== 'string' || name.length === 0) return false;
+      }
+    }
+  }
+  return true;
 }
 
 /** animationWeights 段校验（idle/turn/move 三个非负数字） */
@@ -175,6 +196,13 @@ export function topFieldValid(key: string, value: unknown): boolean {
       return modelSelectionValid(value);
     case 'workStatusTexts':
       return workStatusTextsValid(value);
+    case 'sleepRefuseTexts':
+    case 'sleepStartTexts':
+    case 'sleepEndTexts': {
+      // 睡觉三组台词（条目级）：非空字符串数组，随机挑一句；空数组/空串会让「说话」变成静默失败
+      if (!Array.isArray(value) || value.length === 0) return false;
+      return value.every((text) => typeof text === 'string' && text.length > 0);
+    }
     default:
       return true;
   }

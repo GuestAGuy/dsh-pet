@@ -20,6 +20,7 @@ import {
   readBalance,
   readPosition,
   readSay,
+  readSleep,
   readThrow,
   resolveLeafPath,
   takeChanged,
@@ -448,5 +449,25 @@ describe('readThrow —— 抛掷指令叶子（角度 + 力度）', () => {
     assert.equal(readThrow({ counter: 1, data: { angle: 45, power: 0 } }), null);
     assert.equal(readThrow({ counter: 1, data: { angle: 45, power: -1 } }), null);
     assert.equal(readThrow({ counter: 1, data: { angle: 45, power: NaN } }), null);
+  });
+});
+
+describe('readSleep —— 睡觉叶子解析（状态不是指令）', () => {
+  test('三种形态：睡着带三段名 / 醒着 / 从未写过', () => {
+    assert.deepEqual(readSleep({ counter: 1, data: { sleeping: true, start: 's', loop: 'l', end: 'e' } }), {
+      sleeping: true,
+      start: 's',
+      loop: 'l',
+      end: 'e',
+    });
+    assert.deepEqual(readSleep({ counter: 1, data: { sleeping: false } }), { sleeping: false });
+    assert.equal(readSleep({ counter: 0, data: null }), null);
+  });
+
+  test('形状非法一律丢弃：缺段名 / 空段名 / 非布尔 sleeping', () => {
+    assert.equal(readSleep({ counter: 1, data: { sleeping: true, start: 's', loop: 'l' } }), null);
+    assert.equal(readSleep({ counter: 1, data: { sleeping: true, start: 's', loop: 'l', end: '' } }), null);
+    assert.equal(readSleep({ counter: 1, data: { sleeping: 'yes' } }), null);
+    assert.equal(readSleep({ counter: 1, data: 'sleeping' }), null);
   });
 });

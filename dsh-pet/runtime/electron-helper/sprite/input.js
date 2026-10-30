@@ -118,7 +118,8 @@ Object.assign(PetSprite.prototype, {
       d.dragging = true;
       // 真正开始拖拽才把舞台拍平（人物随光标拿起）
       this.stage.style.transform = 'none';
-      if (this.animations.drag.length) {
+      // 睡觉：位置照常跟手，但不换拖拽动画——睡姿循环整段归睡觉状态机，顶掉就回不来了。
+      if (this.animations.drag.length && !this.sleeping) {
         this.playOnce(S.pick(this.animations.drag));
       }
       this.syncInputBusy(); // 拖拽成立：主进程兜底通道闭嘴（见 inputBusy）
@@ -173,7 +174,8 @@ Object.assign(PetSprite.prototype, {
       }
       // 拖拽松手：非终态工作状态恢复档位循环，否则回 idle。必须用 playOnce：switchTo(idle,false)
       // 会 loop 播放、ended 永不触发，随机链就再也回不来。
-      if (!this.resumeWorkStatusAnim()) {
+      // 睡觉：拖拽期间没换过动画、睡姿照播，这里不接回 idle，否则会把睡姿顶掉。
+      if (!this.sleeping && !this.resumeWorkStatusAnim()) {
         if (this.animations.idle.length) this.playOnce(S.pick(this.animations.idle, this.anim));
       }
       // 释放位置 = 弹簧跟随后的实际包围盒左上角（不是指针目标：滞后时落点应跟随宠物实际位置）
@@ -373,6 +375,24 @@ Object.assign(PetSprite.prototype, {
     }
     this.stopThrow(); // 点击飞行中的宠物 = 收手停住（再播点击回应）
     this.stopMove();
+    // 睡觉：点一下就是叫醒。挤压与音效照常（手感与平时一致），但不播点击回应动画——
+    // 叫醒的表现由 /wake 写回的 sleep 叶子驱动（end 播一遍，播完回随机链）。
+    // 这里直接压当前前台那一帧：平时靠 pendingSquash 等新动画就位，这条路没有换源。
+    if (this.sleeping) {
+      playClickSound();
+      const front = this.front === 0 ? this.videoA : this.videoB;
+      if (front) this.startSquash(front);
+      this.postSleepAction('wake');
+      // 入睡过渡里被点：这次入睡作废，按普通点击播回应动画——「起来」那段不再播。
+      // 先本地清状态：等叶子回来时 setSleep 会因「本来没睡」直接返回，不会插一段 end。
+      if (this.sleepPhase === 'start') {
+        this.sleeping = false;
+        this.sleepSet = null;
+        this.sleepPhase = null;
+        if (this.animations.clicks.length) this.playOnce(S.pick(this.animations.clicks));
+      }
+      return;
+    }
     // 点击音效与浏览器同位置：放在「按下已触发积分」的早退之后、点击动画判断之前
     playClickSound();
     if (!this.animations.clicks.length) return;
@@ -405,7 +425,7 @@ Object.assign(PetSprite.prototype, {
     this.showChatFromMenu(file);
   },
 
-  /** 悬停快捷键：光标在身体上时按 T 开对话、按 D 开关待办。 */
+  /** 悬停快捷键：光标在身体上时按 T 开对话、按 D 开关待办、按 S 切换睡/醒。 */
   onHotkey(e) {
     if (!this.hoverBody) return;
     if (S.isChatHotkey(e)) {
@@ -416,6 +436,12 @@ Object.assign(PetSprite.prototype, {
     if (S.isTodoHotkey(e)) {
       e.preventDefault();
       this.toggleTodo();
+      return;
+    }
+    // 睡觉：与浏览器同为切换语义；该条目没配睡觉动画时整项无效（菜单里也不出现）
+    if (S.isSleepHotkey(e) && Array.isArray(this.animations.sleep) && this.animations.sleep.length > 0) {
+      e.preventDefault();
+      this.postSleepAction(this.sleeping ? 'wake' : 'sleep');
     }
   },
 });

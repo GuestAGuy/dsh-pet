@@ -20,7 +20,8 @@ import { failResult, invalidJson, methodNotAllowed, okResult } from './result.ts
 
 /** 会话交互领域：未命中返回 undefined，命中返回应答。 */
 export async function handleInteractionRoutes(deps: PetRouteDeps, input: RouteInput): Promise<RouteResult | undefined> {
-  const { configPaths, lock, lockBlocked, memeDirsFor, publishWhisper, requirePet, state, surfaceBlocked } = deps;
+  const { configPaths, lock, lockBlocked, memeDirsFor, publishWhisper, requirePet, sleep, state, surfaceBlocked } =
+    deps;
   const { body, method, rest, url } = input;
 
   // 占用锁：POST /lock?pet= 取锁 / 续期二合一（lockId 给了 = 续期，续期即心跳，丢了回 lock-lost），
@@ -59,6 +60,9 @@ export async function handleInteractionRoutes(deps: PetRouteDeps, input: RouteIn
         if (d.reason === 'lock-lost') extra.cause = d.cause;
         return failResult(d.reason, d.message, extra);
       }
+      // 锁 = 第三方接管，所以取锁就把睡着的宠物叫醒：否则它会带着睡姿被指挥，
+      // 而且每条指令都要再走一次「持锁让路」的特判。唤醒只写一次叶子，渲染端照常播「起来」。
+      sleep.wake(petId);
       return okResult({ ok: true, lockId: d.lockId, petId: d.petId, expiresAt: d.expiresAt });
     } catch (e) {
       // 配置读取失败等（安装损坏）→ 显式失败，不静默（与其他动作端点同一口径）

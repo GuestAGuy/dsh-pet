@@ -10,6 +10,9 @@
 // 菜单首项文案随宿主形态变：桌面应用唤起主窗口，独立模式打开本机 AI 设置页，web 宿主打开站点。
 const OPEN_LABEL = { desktop: '打开软件', standalone: '打开 AI 设置', web: '打开网站' };
 
+/** 睡觉拒绝台词的气泡时长（ms）：比默认 10s 略短，它只是「被打扰了」的一句回绝。 */
+const SLEEP_REFUSE_BUBBLE_MS = 8000;
+
 Object.assign(PetSprite.prototype, {
   onContextMenu(e) {
     const d = this.dragState;
@@ -30,6 +33,13 @@ Object.assign(PetSprite.prototype, {
     tools.push({ label: '查看余额', action: 'show-balance' });
     // 「待办事项」是待办面板的唯一入口（单击宠物不再弹面板），排在余额之后。
     tools.push({ label: '待办事项', action: 'todo', hint: S.TODO_HOTKEY_HINT });
+    // 睡觉/起来：睡着时这一项是「起来」（点它等于叫醒），醒着时是「睡觉」。两种文案共用一个位置，
+    // 都在「待办事项」之后、「碎碎念」之前（与浏览器端的菜单同一排法）。
+    // 该条目没配 animations.sleep 就整项不出现——与配置注释「不写 = 没有睡觉功能」一致。
+    if (Array.isArray(this.animations.sleep) && this.animations.sleep.length > 0) {
+      if (this.sleeping) tools.push({ label: '起来', action: 'wake', hint: S.SLEEP_HOTKEY_HINT });
+      else tools.push({ label: '睡觉', action: 'sleep', hint: S.SLEEP_HOTKEY_HINT });
+    }
     tools.push({ label: '碎碎念', action: 'whisper' });
     // 「配图」：与浏览器端同一份分支（纳入对话的配图 / 其他），点一张就用它说一句；没有可用图时
     // 返回 null，整项不出现。数据来自拍平层吹入的条目级字段（this.pet.memes / chatImageEnabled /
@@ -76,9 +86,17 @@ Object.assign(PetSprite.prototype, {
   },
 
   /** keepFacing = 调用方已显式指定朝向：跳过下面「文字类动画点播前强制朝左」的镜像修正，显式值优先。 */
-  onMenuAction(leaf, keepFacing) {
+  onMenuAction(leaf, keepFacing, fromHost) {
     this.closeMenu();
     if (!leaf || typeof leaf !== 'object') return;
+    // 睡觉：打扰类动作在点击这一刻就拒绝——弹一句台词，什么都不执行。持锁时让路（锁=控制权交给第三方）。
+    // 对话弹窗、待办面板、点播动画都是渲染端行为，宿主闸门拦不到；两端用同一份放行判定。
+    if (this.sleeping && !this.frozen && !fromHost && !S.isSleepAllowedAction(leaf.action)) {
+      const pool = Array.isArray(this.pet.sleepRefuseTexts) ? this.pet.sleepRefuseTexts : [];
+      const text = pool[Math.floor(Math.random() * pool.length)];
+      if (text !== undefined) this.showWhisper(text, undefined, undefined, SLEEP_REFUSE_BUBBLE_MS, false);
+      return;
+    }
     if (leaf.action === 'third-party') {
       // 第三方菜单项：只把 (owner, label) 交给宿主，具体做什么由注册方自己查 /menu/events。
       // 带上宠物 id——同一条菜单项在不同宠物上被点，注册方要能分辨是哪只。
@@ -95,6 +113,11 @@ Object.assign(PetSprite.prototype, {
     }
     if (leaf.action === 'show-balance') {
       this.showBalanceFromMenu(); // 立即拉余额并展示（无需等 1s 触发轮询，展示路径与周期触发一致）
+      return;
+    }
+    if (leaf.action === 'sleep' || leaf.action === 'wake') {
+      // 只发请求，画面等 sleep 叶子回来才动：三段名与时机都由宿主/渲染端状态机决定（见 setSleep）
+      this.postSleepAction(leaf.action);
       return;
     }
     if (leaf.action === 'whisper') {
