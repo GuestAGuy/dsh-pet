@@ -33,6 +33,9 @@ export const es: Record<Key, string> = {
   emptyPets: 'Aún no hay mascotas; haz clic en "Agregar mascota" para crear una.',
   sizeLabel: 'Tamaño (ancho px)',
   sizeHint: 'La altura es automática = ancho × 9/16.',
+  sizePercentLabel: 'Ancho de pantalla máx. (%)',
+  sizePercentHint:
+    'Cuánto del ancho de pantalla puede ocupar la mascota: 100 = nunca más ancha que una pantalla (igual que px en ventanas anchas); 30–40 la hace claramente más pequeña en el móvil sin cambiar el escritorio. Se calcula una vez al cargar; recarga tras redimensionar.',
   nameLabel: 'Nombre',
   nameHint:
     'Se muestra al pasar el cursor y se añade a las personas de la IA ("tu nombre es X"). Se permiten duplicados; si se deja vacío, se usa el id de la mascota.',

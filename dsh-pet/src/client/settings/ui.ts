@@ -4,12 +4,50 @@
  * 说明统一走 `data-tip` 属性（气泡由 `./tip-layer` 挂到 body 上摆位），不额外包一层 DOM，避免打乱外层 flex 的间距与对齐。
  * @module dsh-pet/src/client/settings/ui
  */
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent } from 'react';
+import type * as ReactNS from 'react';
 import type { jsx } from 'react/jsx-runtime';
 import type { SettingsRuntime } from './runtime.ts';
 
 /** 输入框与下拉框共用的类名。 */
 export const INPUT_CLASS = 'dsh-pet-cfg__inp';
+
+/**
+ * 数字输入的统一属性：非受控 + 失焦提交。
+ *
+ * 受控写法（`value={String(n)}` + `Number(e.target.value)`）在删空时必然把空串变成 0，
+ * 用户想「删干净再输」时会被打断；这里让空框是合法中间态，失焦才解析并提交。
+ * `key` 跟随值变化：外部改了配置就重挂载刷新，编辑期间 state 不动，所以不会打断输入。
+ *
+ * @param value - 当前生效值。
+ * @param onCommit - 提交新值；只有真的变化时才回调。
+ * @param extra - 该输入自己的属性（step / min / max / disabled 等）。
+ * @returns 可直接摊给 `<input>` 的属性。
+ */
+export function numberInputProps(
+  value: number,
+  onCommit: (value: number) => void,
+  extra: ReactNS.JSX.IntrinsicElements['input'] = {},
+): ReactNS.JSX.IntrinsicElements['input'] {
+  return {
+    ...extra,
+    type: 'number',
+    className: INPUT_CLASS,
+    defaultValue: String(value),
+    key: String(value),
+    onBlur: (e: ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value.trim();
+      const parsed = Number(text);
+      // 空串/脏值 = 放弃这次编辑，把显示回退到生效值。
+      const next = text !== '' && Number.isFinite(parsed) ? parsed : value;
+      e.target.value = String(next);
+      if (next !== value) onCommit(next);
+    },
+    onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') e.currentTarget.blur();
+    },
+  };
+}
 
 /** 等宽字体栈（路径与命令展示用），走系统栈以免多拉一份资源。 */
 export const MONO_STACK = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace';

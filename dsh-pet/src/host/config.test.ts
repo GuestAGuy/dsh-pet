@@ -773,6 +773,56 @@ describe('saveUserConfig —— 实例级人设 whisperPrompt（白名单 + 清�
   });
 });
 
+describe('配置合并与保存 —— sizePercent（合法才落键，缺省按默认 100 消费）', () => {
+  const petAt = (merged: Record<string, Record<string, unknown>>): Record<string, unknown> =>
+    (merged.main.pets as Record<string, unknown>[])[0];
+
+  test('实例写了合法百分比 → 原样带出', () => {
+    const pet = petAt(readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: 40 }] })));
+    assert.equal(pet.sizePercent, 40);
+  });
+
+  test('没写 → 不落键（渲染侧按默认 100，文件不长多余的键；无用户层时形状也一致）', () => {
+    assert.equal('sizePercent' in petAt(readAllConfig(withBase({}))), false);
+  });
+
+  test('非数字或小于 1 → 不落键并告警，不抛错', () => {
+    for (const value of [0, -5, '40', null, { a: 1 }, true]) {
+      const pet = petAt(readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: value }] })));
+      assert.equal('sizePercent' in pet, false, `${JSON.stringify(value)} 应被忽略`);
+    }
+  });
+
+  test('边界值与超过 100 都合法（不设上限）', () => {
+    for (const value of [1, 100, 150]) {
+      const pet = petAt(readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: value }] })));
+      assert.equal(pet.sizePercent, value);
+    }
+  });
+
+  test('saveUserConfig：合法百分比落盘（不在白名单就会被保存悄悄丢掉）', () => {
+    const out = saveOnce({ pets: [{ ...PETS[0], sizePercent: 40 }] });
+    assert.equal((out?.pets as Record<string, unknown>[])[0].sizePercent, 40);
+  });
+
+  test('saveUserConfig：未传 → 不凭空造字段', () => {
+    const out = saveOnce({ pets: PETS });
+    assert.equal('sizePercent' in (out?.pets as Record<string, unknown>[])[0], false);
+  });
+
+  test('saveUserConfig：传了非法值 → 整体拒绝（宿主回 400，不静默丢输入）', () => {
+    for (const value of [0, -1, '40']) {
+      assert.equal(saveOnce({ pets: [{ ...PETS[0], sizePercent: value }] }), null, `${JSON.stringify(value)} 应被拒绝`);
+    }
+  });
+
+  test('合并结果直接喂回 save：百分比往返不丢', () => {
+    const merged = readAllConfig(withBase({}, { pets: [{ ...BASE.pets[0], sizePercent: 40 }] }));
+    const layerPets = merged.main.pets as Record<string, unknown>[];
+    assert.equal((saveOnce({ pets: layerPets })?.pets as Record<string, unknown>[])[0].sizePercent, 40);
+  });
+});
+
 describe('saveUserConfig —— 物理参数 physics（白名单 + 透传保留）', () => {
   const PHYS: Record<string, unknown> = BASE.physics;
 

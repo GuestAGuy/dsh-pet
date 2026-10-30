@@ -30,6 +30,9 @@ export const zh = {
   emptyPets: '暂无宠物，点击「添加宠物」创建。',
   sizeLabel: '大小（宽度 px）',
   sizeHint: '高度自动 = 宽度 × 9/16。',
+  sizePercentLabel: '屏幕宽度上限（%）',
+  sizePercentHint:
+    '桌宠最多占屏幕多宽：100 = 不超过一屏宽，窗口比宠物宽时与按 px 显示完全一致；填 30–40 可让手机竖屏明显变小，桌面观感不变。只在页面加载时计算一次，改窗口大小后刷新生效。',
   nameLabel: '名字',
   nameHint: '显示名：鼠标悬浮宠物时弹出，也会加进 AI 人设（你的名字是 X）。可重复，留空按宠物 id 处理。',
   personaLabel: '人设（可选）',

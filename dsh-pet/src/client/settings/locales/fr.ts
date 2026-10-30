@@ -32,6 +32,9 @@ export const fr: Record<Key, string> = {
   emptyPets: "Aucun compagnon pour l'instant — cliquez sur « Ajouter un compagnon » pour en créer un.",
   sizeLabel: 'Taille (largeur px)',
   sizeHint: 'La hauteur est automatique = largeur × 9/16.',
+  sizePercentLabel: 'Largeur d’écran max (%)',
+  sizePercentHint:
+    'Part de la largeur d’écran que le pet peut occuper : 100 = jamais plus large qu’un écran (identique au px sur une fenêtre large) ; 30–40 le rend nettement plus petit sur téléphone sans changer le bureau. Calculé une fois au chargement ; rechargez après redimensionnement.',
   nameLabel: 'Nom',
   nameHint:
     "Affiché au survol du compagnon et ajouté aux personas de l'IA (« votre nom est X »). Les doublons sont permis ; laissé vide, l'identifiant du compagnon est utilisé.",

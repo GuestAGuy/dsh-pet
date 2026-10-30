@@ -1830,7 +1830,7 @@ paths:
 
         有以下几点必须知道：
 
-        - **只白名单字段会被保留**：`pets[]` 的 `id`/`name`/`size`/`balanceEnabled`/
+        - **只白名单字段会被保留**：`pets[]` 的 `id`/`name`/`size`/`sizePercent`/`balanceEnabled`/
           `whisperEnabled`/`workStatusEnabled`/`fixedEnabled`/`display`/`position`，以及顶层
           `notificationsEnabled`/`clickSoundEnabled`/`whisperImageEnabled`/`chatImageEnabled`/
           `chatAnimationEnabled`/`confineToScreen`/`trayEnabled`/`voiceEnabled`/`voiceName`/`voiceWhisperEnabled`/
@@ -2015,7 +2015,7 @@ paths:
         必须知道的几点：
 
         - **整段替换**：`pets` 必须是该条目的**全部实例**，漏传一只等于把它删掉。
-        - **白名单重建 + 透传保留**：实例只保留 `id`/`name`/`size`/`balanceEnabled`/
+        - **白名单重建 + 透传保留**：实例只保留 `id`/`name`/`size`/`sizePercent`/`balanceEnabled`/
           `whisperEnabled`/`workStatusEnabled`/`fixedEnabled`/`display`/`position`/`whisperPrompt`；
           该文件顶层的 `animations`/`animationWeights`/`whisperPrompt`/`memes` 等原样保留。
         - **不接受全局字段**：`notificationsEnabled`/`physics`/`font`/`whisperModel` 等即使传了
@@ -4012,6 +4012,16 @@ components:
           type: number
           exclusiveMinimum: 0
           description: 宠物尺寸（像素）
+        sizePercent:
+          type: number
+          minimum: 1
+          default: 100
+          description: |
+            屏幕宽度上限（%，默认 100，不设上限）。按人物本体占屏宽换算画框，`size` 仍是画框上限：
+            100 ≈ 不限制（宽窗口下与按 px 显示一致）；填 30–50 可让手机竖屏明显变小，
+            填 150 人物会比屏还宽，但画框仍被 `size` 夹住。
+            只在页面加载时解析一次，改窗口大小后需刷新。
+            仅作用于浏览器半侧；桌面透明窗始终用 `size`。小于 1 或非数字回落到 100。
         balanceEnabled:
           type: boolean
         whisperEnabled:

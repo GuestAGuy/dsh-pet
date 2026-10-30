@@ -31,6 +31,9 @@ export const pt: Record<Key, string> = {
   emptyPets: 'Nenhum pet ainda — clique em "Adicionar pet" para criar.',
   sizeLabel: 'Tamanho (largura px)',
   sizeHint: 'A altura é automática = largura × 9/16.',
+  sizePercentLabel: 'Largura máx. da tela (%)',
+  sizePercentHint:
+    'Quanto da largura da tela o pet pode ocupar: 100 = nunca mais largo que uma tela (igual ao px em janelas largas); 30–40 deixa bem menor no celular sem mudar o desktop. Calculado uma vez ao carregar; recarregue após redimensionar.',
   nameLabel: 'Nome',
   nameHint:
     'Nome exibido ao passar o mouse e incluído na persona da IA ("seu nome é X"). Pode repetir; vazio usa o id do pet.',

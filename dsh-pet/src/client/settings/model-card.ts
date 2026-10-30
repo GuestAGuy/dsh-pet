@@ -9,7 +9,7 @@ import type { ModelSelection } from '../../shared/types.ts';
 import type { ModelCatalogGroup } from './picker/index.ts';
 import type { ModelPickerProps } from './picker/index.ts';
 import type { SettingsRuntime } from './runtime.ts';
-import { INPUT_CLASS, makeUiKit } from './ui.ts';
+import { makeUiKit, numberInputProps } from './ui.ts';
 
 /** 两个模型字段的键名。 */
 export type ModelFieldKey = 'whisperModel' | 'chatModel';
@@ -59,15 +59,7 @@ export function makeModelCard(
     const numField = (label: string, value: number, setter: (v: number) => void) =>
       field(
         t(label),
-        h('input', {
-          type: 'number',
-          className: INPUT_CLASS,
-          step: '1',
-          min: '0',
-          value: String(value),
-          disabled: busy,
-          onChange: (e: { target: { value: string } }) => setter(Number(e.target.value)),
-        }),
+        h('input', numberInputProps(value, setter, { step: '1', min: '0', disabled: busy })),
         t(label + 'Hint'),
       );
 

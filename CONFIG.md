@@ -10,7 +10,7 @@
 
 DSH 设置 → 「桌宠配置」：
 
-- **大小**：宽度 px（高度自动 = 宽度 × 9/16）
+- **大小**：宽度 px（高度自动 = 宽度 × 9/16）；另有**屏幕宽度上限**（%，默认 100，不设上限）：按人物本体占屏宽收口、px 作画框上限——100 ≈ 不限制（桌面观感与纯 px 一致），填 30–50 可让手机竖屏明显变小，填 150 人物会比屏还宽（画框仍受 px 夹住）。只在页面加载时算一次，改完窗口大小要刷新才生效
 - **位置**：四角（corner）＋ 水平/垂直边距（marginX / marginY）
 - **显示位置**（display）：web=仅浏览器 / desktop=仅桌面 / both=两者都显示 / none=都不显示
 - **余额功能**：勾选后该宠物才会触发余额动画并显示余额气泡（服务商未登记余额接口时改为弹文字说明气泡）
@@ -31,7 +31,7 @@ DSH 设置 → 「桌宠配置」：
 ]
 ```
 
-- 每只宠物：`id`（标识）／`size`（宽度 px）／`balanceEnabled`（是否启用余额功能，必填布尔）／`display`（web/desktop/both/none，必填，见上）／`position`（corner 四角之一 + marginX/marginY 边距）
+- 每只宠物：`id`（标识）／`size`（宽度 px）／`sizePercent`（可选，屏幕宽度百分比 1–100；写了就按窗口宽收口、`size` 作上限）／`balanceEnabled`（是否启用余额功能，必填布尔）／`display`（web/desktop/both/none，必填，见上）／`position`（corner 四角之一 + marginX/marginY 边距）
 - 余额刷新周期：`eventsRefreshSec.balance`（秒）——余额数据刷新与余额动画触发的间隔，启动时立即触发一次，之后按此周期循环（默认 1800）
 - 设置页的修改保存到用户层 `$DSH_HOME/dsh-pet/main-config.jsonc`（**完整宠物列表**，覆盖包内默认）；「同步」把包内 `config.jsonc` 原文整份写入该文件（等价于回落默认，但文件保留下来、可直接编辑）
 

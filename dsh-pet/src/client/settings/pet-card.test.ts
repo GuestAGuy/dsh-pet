@@ -90,9 +90,22 @@ describe('PetCard —— 宠物配置卡', () => {
     const tree = render((patch) => patches.push(patch));
     const name = control(tree, 'input', (props) => props.value === '小桌宠');
     (name.props.onChange as (e: { target: { value: string } }) => void)({ target: { value: '新名字' } });
-    const size = control(tree, 'input', (props) => props.value === '260');
-    (size.props.onChange as (e: { target: { value: string } }) => void)({ target: { value: '300' } });
+    // 数字框非受控：失焦才提交，删空时不会被写回。
+    const size = control(tree, 'input', (props) => props.defaultValue === '260');
+    (size.props.onBlur as (e: { target: { value: string } }) => void)({ target: { value: '300' } });
     assert.deepEqual(patches, [{ name: '新名字' }, { size: 300 }]);
+  });
+
+  test('百分比输入：空框失焦不回写，有新值才提交', () => {
+    const patches: PetPatch[] = [];
+    const tree = render((patch) => patches.push(patch));
+    const percent = control(tree, 'input', (props) => props.min === '1' && props.step === '1');
+    assert.equal(percent.props.defaultValue, '100', '没配时按默认 100 显示');
+    const fire = percent.props.onBlur as (e: { target: { value: string } }) => void;
+    fire({ target: { value: '  ' } });
+    assert.deepEqual(patches, [], '空框失焦 = 放弃这次编辑');
+    fire({ target: { value: '30' } });
+    assert.deepEqual(patches, [{ sizePercent: 30 }]);
   });
 
   test('显示位置下拉：改的是顶层 display', () => {
@@ -113,10 +126,10 @@ describe('PetCard —— 宠物配置卡', () => {
     const tree = render((patch) => patches.push(patch));
     const corner = picker(tree, 'bottom-left');
     (corner.props.onChange as (id: string) => void)('top-right');
-    const marginX = control(tree, 'input', (props) => props.value === '40');
-    (marginX.props.onChange as (e: { target: { value: string } }) => void)({ target: { value: '12' } });
-    const marginY = control(tree, 'input', (props) => props.value === '60');
-    (marginY.props.onChange as (e: { target: { value: string } }) => void)({ target: { value: '34' } });
+    const marginX = control(tree, 'input', (props) => props.defaultValue === '40');
+    (marginX.props.onBlur as (e: { target: { value: string } }) => void)({ target: { value: '12' } });
+    const marginY = control(tree, 'input', (props) => props.defaultValue === '60');
+    (marginY.props.onBlur as (e: { target: { value: string } }) => void)({ target: { value: '34' } });
     assert.deepEqual(patches, [
       { position: { corner: 'top-right' } },
       { position: { marginX: 12 } },
