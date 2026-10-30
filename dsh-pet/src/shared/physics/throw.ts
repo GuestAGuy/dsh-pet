@@ -83,6 +83,14 @@ export const screenOfBox = (space: ThrowSpace, x: number, y: number): number => 
   return hit >= 0 ? hit : nearestIndex(space.areas, cx, cy);
 };
 
+/** 本步撞到的边与撞击速度。 */
+export interface ThrowHit {
+  /** 撞的是哪条边。 */
+  edge: 'left' | 'right' | 'ceiling' | 'floor';
+  /** 撞击前的法向速度绝对值（px/s）：振动强度与挤压强度都按它算。 */
+  speed: number;
+}
+
 /** 抛体单步积分与边界反弹。返回值带上两个标志：bounced = 本步是否碰边或落地，
  *  atRest = 贴地且低速（或碰边后整体低速），调用方应停止循环。
  *  physics 取成品配置的物理参数，缺失时用默认值兜底。 */
@@ -91,18 +99,25 @@ export const throwStep = (
   dtRaw: number,
   b: ThrowBounds,
   physics: PhysicsParams = DEFAULT_PHYSICS,
-): ThrowState & { bounced: boolean; atRest: boolean } => {
+): ThrowState & { bounced: boolean; atRest: boolean; hit: ThrowHit | null } => {
   const dt = Math.min(Math.max(dtRaw, 0), MAX_STEP_DT);
   let { x, y, vx, vy } = s;
   vy += physics.gravity * dt;
   x += vx * dt;
   y += vy * dt;
   let bounced = false;
+  let hit: ThrowHit | null = null;
+  /** 同一步撞到两条边（角落）时留更重的那个：手感只按主撞击算。 */
+  const record = (edge: ThrowHit['edge'], speed: number): void => {
+    if (hit === null || speed > hit.speed) hit = { edge, speed };
+  };
   if (x < b.minX) {
+    record('left', Math.abs(vx));
     x = b.minX;
     vx = Math.abs(vx) * physics.restitution;
     bounced = true;
   } else if (x > b.maxX) {
+    record('right', Math.abs(vx));
     x = b.maxX;
     vx = -Math.abs(vx) * physics.restitution;
     bounced = true;
@@ -110,11 +125,13 @@ export const throwStep = (
   if (y < b.minY) {
     // ceilingBounce=false：顶部无边界，不夹不弹——宠物飞出屏幕顶部，靠重力落回（y 保持越界状态）
     if (physics.ceilingBounce) {
+      record('ceiling', Math.abs(vy));
       y = b.minY;
       vy = Math.abs(vy) * physics.restitution;
       bounced = true;
     }
   } else if (y >= b.maxY) {
+    record('floor', Math.abs(vy));
     y = b.maxY;
     vx *= Math.max(0, 1 - physics.groundFriction * dt);
     if (Math.abs(vy) < REST_VY) vy = 0;
@@ -124,7 +141,7 @@ export const throwStep = (
   const speed = Math.hypot(vx, vy);
   const atRest =
     (y >= b.maxY - 1 && Math.abs(vy) < 1 && Math.abs(vx) < REST_VX) || (bounced && speed < REST_VY && Math.abs(vy) < 1);
-  return { x, y, vx, vy, bounced, atRest };
+  return { x, y, vx, vy, bounced, atRest, hit };
 };
 
 /** 多屏抛掷步进：物理与 throwStep 同一套，区别是边界取自身体中心所在屏，越界后多问一句越界侧有没有屏。
@@ -141,16 +158,21 @@ export const throwStepRegion = (
   space: ThrowSpace,
   physics: PhysicsParams = DEFAULT_PHYSICS,
   lockScreen = -1,
-): ThrowState & { screen: number; bounced: boolean; atRest: boolean } => {
+): ThrowState & { screen: number; bounced: boolean; atRest: boolean; hit: ThrowHit | null } => {
   const dt = Math.min(Math.max(dtRaw, 0), MAX_STEP_DT);
   let { x, y, vx, vy } = s;
   vy += physics.gravity * dt;
   x += vx * dt;
   y += vy * dt;
-  if (space.areas.length === 0) return { x, y, vx, vy, screen: -1, bounced: false, atRest: false };
+  if (space.areas.length === 0) return { x, y, vx, vy, screen: -1, bounced: false, atRest: false, hit: null };
 
   const h = (space.size * 9) / 16;
   let bounced = false;
+  let hit: ThrowHit | null = null;
+  /** 同一步撞到两条边时留更重的那个，与 {@link throwStep} 同口径。 */
+  const record = (edge: ThrowHit['edge'], speed: number): void => {
+    if (hit === null || speed > hit.speed) hit = { edge, speed };
+  };
   // 锁定屏（confineToScreen）：索引越界（飞行途中拔掉显示器导致屏数变少）即视为不锁定
   const locked = Number.isInteger(lockScreen) && lockScreen >= 0 && lockScreen < space.areas.length;
   /** 该用哪块屏的 AABB / 工作区 / 面板：锁定时恒为锁定屏，否则取身体中心所在屏 */
@@ -164,12 +186,14 @@ export const throwStepRegion = (
   const cy = y + h / 2;
   if (x < b.minX) {
     if (locked || indexAtPoint(space.panels, pa.x - 1, cy) < 0) {
+      record('left', Math.abs(vx));
       x = b.minX;
       vx = Math.abs(vx) * physics.restitution;
       bounced = true;
     }
   } else if (x > b.maxX) {
     if (locked || indexAtPoint(space.panels, rectRight(pa), cy) < 0) {
+      record('right', Math.abs(vx));
       x = b.maxX;
       vx = -Math.abs(vx) * physics.restitution;
       bounced = true;
@@ -185,6 +209,7 @@ export const throwStepRegion = (
   if (y < b.minY) {
     // ceilingBounce=false：顶部无边界，不夹不弹——宠物飞出屏幕顶部，靠重力落回
     if (physics.ceilingBounce && (locked || indexAtPoint(space.panels, cx, pa2.y - 1) < 0)) {
+      record('ceiling', Math.abs(vy));
       y = b.minY;
       vy = Math.abs(vy) * physics.restitution;
       bounced = true;
@@ -192,6 +217,7 @@ export const throwStepRegion = (
   } else if (y >= b.maxY) {
     // 下方还有一块屏（上下排布的桌面）⇒ 不当地面，继续往下掉
     if (locked || indexAtPoint(space.panels, cx, rectBottom(pa2)) < 0) {
+      record('floor', Math.abs(vy));
       y = b.maxY;
       vx *= Math.max(0, 1 - physics.groundFriction * dt);
       if (Math.abs(vy) < REST_VY) vy = 0;
@@ -205,7 +231,7 @@ export const throwStepRegion = (
   const speed = Math.hypot(vx, vy);
   const atRest =
     (y >= b.maxY - 1 && Math.abs(vy) < 1 && Math.abs(vx) < REST_VX) || (bounced && speed < REST_VY && Math.abs(vy) < 1);
-  return { x, y, vx, vy, screen: cur, bounced, atRest };
+  return { x, y, vx, vy, screen: cur, bounced, atRest, hit };
 };
 
 /** 一帧该积几步（整数 ≥ 1）。N = 1 是常态：普通甩抛一帧位移远小于 8px；

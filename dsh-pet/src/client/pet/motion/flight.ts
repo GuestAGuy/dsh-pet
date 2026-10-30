@@ -32,6 +32,14 @@ export interface FlightMetrics {
   bottomPad: number;
 }
 
+/** 本帧撞击：撞的是哪条边（或宠物）与撞前速度。 */
+export interface FlightImpact {
+  /** 撞击对象；`pet` = 撞到另一只宠物。 */
+  kind: 'left' | 'right' | 'ceiling' | 'floor' | 'pet';
+  /** 撞击前的法向速度绝对值（px/s）。 */
+  speed: number;
+}
+
 /** 飞行驱动的依赖：全部用取值函数，避免捕获渲染期的快照。 */
 export interface FlightDeps {
   /** 宠物根节点；`null` 表示还没挂载。 */
@@ -56,6 +64,8 @@ export interface FlightDeps {
   commitFinal(center: Center): void;
   /** 落地挤压：入参是本帧落地前的竖直速度（冲击速度）。 */
   onLanding(impactVy: number): void;
+  /** 本帧发生撞击（撞边或撞宠）：触觉反馈用；一帧最多回调一次，取本帧最重的那次。 */
+  onImpact?(impact: FlightImpact): void;
 }
 
 /** 飞行驱动：一个宠物一个实例。 */
@@ -97,8 +107,13 @@ type FlightBounds = ReturnType<typeof throwBounds>;
 function integrate(state: ThrowState, dt: number, bounds: FlightBounds, physics: PhysicsParams): FlightStep {
   const substeps = throwSubsteps(state.vx, state.vy, dt);
   let res = throwStep(state, dt / substeps, bounds, physics);
-  for (let i = 1; i < substeps && !res.atRest; i++) res = throwStep(res, dt / substeps, bounds, physics);
-  return res;
+  /** 子步里只保留最重的一次撞击：一帧震一下就够了。 */
+  let hit = res.hit;
+  for (let i = 1; i < substeps && !res.atRest; i++) {
+    res = throwStep(res, dt / substeps, bounds, physics);
+    if (res.hit !== null && (hit === null || res.hit.speed > hit.speed)) hit = res.hit;
+  }
+  return { ...res, hit };
 }
 
 /**
@@ -146,6 +161,7 @@ export function createFlight(deps: FlightDeps): Flight {
         { x: otherBox.x, y: otherBox.y, vx: vel.vx, vy: vel.vy, size: slot.size },
       );
       if (!hit) continue;
+      deps.onImpact?.({ kind: 'pet', speed: hit.impactSpeed });
       // 飞行方按动量继续弹开；被撞方回调，以新初速抛出去。一帧只处理一次，避免连锁抖动。
       slot.onHit(hit.hvx, hit.hvy);
       return { x: current.x, y: current.y, vx: hit.fvx, vy: hit.fvy };
@@ -190,6 +206,7 @@ export function createFlight(deps: FlightDeps): Flight {
       last = now;
       const fallingVy = current.vy; // 本帧积分前的竖直速度，即落地冲击速度。
       const res = integrate(current, dt, bounds, physics);
+      if (res.hit !== null) deps.onImpact?.({ kind: res.hit.edge, speed: res.hit.speed });
       current = { x: res.x, y: res.y, vx: res.vx, vy: res.vy };
       if (physics.petCollision) current = resolveCollisions(current, metrics);
       state = current;

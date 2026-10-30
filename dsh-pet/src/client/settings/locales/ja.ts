@@ -154,6 +154,9 @@ export const ja: Record<Key, string> = {
   physicsCeilingBounceHint: 'オフにすると、投げたペットが画面の上端を越えて飛び出せます（重力が引き戻します）',
   physicsPetCollision: 'ペット同士の衝突 (petCollision)',
   physicsPetCollisionHint: '飛行中のペットが他のペットに当たると、運動量保存に従って弾き返されます（質量 ∝ サイズ²）',
+  physicsHaptic: '衝突時の振動',
+  physicsHapticHint:
+    '壁・床・天井・ペット同士の衝突ごとに 1 回振動します。Chrome / Edge で動作。iOS と Via のような WebView ブラウザでは無効。サイレント/集中モードは振動を止めます。',
   invalidPhysics: '物理パラメータを確認してください：重力 / 地面摩擦 ≥ 0、弾性 0～1、投げる力 > 0。',
   fontTitle: '外観とフォント',
   fontHint:

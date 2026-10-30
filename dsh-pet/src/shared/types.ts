@@ -171,6 +171,10 @@ export interface PhysicsParams {
   throwPower: number;
   /** 多宠物互相碰撞开关：true = 飞行中的宠物撞到其它宠物时按动量守恒弹开；false = 互相穿过（默认） */
   petCollision: boolean;
+  /** 碰撞触觉反馈：true（默认）时撞墙 / 落地 / 撞顶与宠物互撞各震一下。
+   *  仅浏览器半侧生效，且要求环境有 Vibration API——iOS 与桌面端没有，静默跳过。
+   *  缺省按 true；旧配置里没有这个键也算开。 */
+  hapticEnabled?: boolean;
 }
 
 /** 字体种类预设 id（font.family 白名单；清单与对应字体栈见 shared/fonts.ts）。 */

@@ -145,6 +145,9 @@ export const zh = {
   physicsCeilingBounceHint: '关掉后抛掷可飞出屏幕顶部（重力仍会把它拉回来）',
   physicsPetCollision: '宠物互撞 petCollision',
   physicsPetCollisionHint: '飞行中的宠物撞到别的宠物按动量守恒弹开（质量 ∝ 尺寸²）',
+  physicsHaptic: '碰撞震动 hapticEnabled',
+  physicsHapticHint:
+    '撞墙、落地、撞顶、互撞各震一下。Chrome / Edge 可用；iOS 与 Via 等 WebView 壳不生效；勿扰模式会挡住振动。',
   invalidPhysics: '请检查物理参数：重力 / 地面摩擦 ≥ 0，弹性 0~1，总力度 > 0。',
   fontTitle: '外观与字体',
   fontHint:

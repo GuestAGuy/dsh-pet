@@ -160,6 +160,9 @@ export const fr: Record<Key, string> = {
   physicsPetCollision: 'Collisions entre compagnons (petCollision)',
   physicsPetCollisionHint:
     'Un compagnon en vol rebondit sur les autres en conservant la quantité de mouvement (masse ∝ taille²)',
+  physicsHaptic: 'Vibration aux collisions',
+  physicsHapticHint:
+    'Une vibration par impact (murs, sol, plafond, autres compagnons). Fonctionne dans Chrome/Edge ; pas sur iOS ni dans les coques WebView comme Via. Le mode Ne pas déranger la bloque.',
   invalidPhysics:
     'Vérifiez les paramètres physiques : gravité / frottement au sol ≥ 0, rebond entre 0 et 1, force de lancer > 0.',
   fontTitle: 'Apparence et police',

@@ -43,11 +43,12 @@ export const rectsOverlap = (
 
 /** 飞行中的宠物撞到另一只：近乎弹性碰撞（动量守恒 + 恢复系数 0.995），质量 ∝ size²。
  *  法向 = 两包围盒中心连线，法向速度按一维动量公式重分配，切向分量各自保留（无切向摩擦）。
- *  返回 null = 中心重合定不出法向，或两者正在分离（避免重叠帧反复弹跳抖动）。 */
+ *  返回 null = 中心重合定不出法向，或两者正在分离（避免重叠帧反复弹跳抖动）。
+ *  impactSpeed 是法向相对速度，供触觉反馈换算强度。 */
 export const collidePet = (
   fly: PetCollider,
   hit: PetCollider,
-): { fvx: number; fvy: number; hvx: number; hvy: number } | null => {
+): { fvx: number; fvy: number; hvx: number; hvy: number; impactSpeed: number } | null => {
   const hf = (fly.size * 9) / 16 / 2;
   const hh = (hit.size * 9) / 16 / 2;
   const cx = hit.x + hit.size / 2 - (fly.x + fly.size / 2);
@@ -72,6 +73,7 @@ export const collidePet = (
     fvy: fly.vy - v1n * ny + v1n2 * ny,
     hvx: hit.vx - v2n * nx + v2n2 * nx,
     hvy: hit.vy - v2n * ny + v2n2 * ny,
+    impactSpeed: vrel,
   };
 };
 

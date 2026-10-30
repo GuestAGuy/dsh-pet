@@ -158,6 +158,9 @@ export const pt: Record<Key, string> = {
     'Desligado, o arremesso pode sair pelo topo da tela (a gravidade ainda traz o pet de volta)',
   physicsPetCollision: 'Colisão entre pets',
   physicsPetCollisionHint: 'Um pet em voo quica nos outros com conservação de momento (massa ∝ tamanho²)',
+  physicsHaptic: 'Vibração ao colidir',
+  physicsHapticHint:
+    'Uma vibração por impacto (paredes, chão, teto, outros pets). Funciona no Chrome/Edge; não no iOS nem em navegadores WebView como o Via. O modo Não perturbe bloqueia o vibrador.',
   invalidPhysics:
     'Revise os valores de física: gravidade / atrito com o chão ≥ 0, restituição 0–1, força de arremesso > 0.',
   fontTitle: 'Aparência e fonte',

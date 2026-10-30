@@ -162,6 +162,9 @@ export const es: Record<Key, string> = {
     'Desactívalo para que un lanzamiento pueda salir por la parte superior de la pantalla (la gravedad sigue tirando de él hacia abajo)',
   physicsPetCollision: 'Colisiones entre mascotas',
   physicsPetCollisionHint: 'Una mascota en vuelo rebota contra las demás conservando el momento (masa ∝ tamaño²)',
+  physicsHaptic: 'Vibración al chocar',
+  physicsHapticHint:
+    'Una vibración por impacto (paredes, suelo, techo, otras mascotas). Funciona en Chrome/Edge; no en iOS ni en navegadores WebView como Via. El modo No molestar la bloquea.',
   invalidPhysics:
     'Revisa los parámetros de física: gravedad / fricción con el suelo ≥ 0, rebote 0–1, fuerza de lanzamiento > 0.',
   fontTitle: 'Apariencia y fuente',

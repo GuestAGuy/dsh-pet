@@ -63,6 +63,9 @@ export function makePhysicsCard(rt: SettingsRuntime): FunctionComponent<PhysicsC
               props.onChange({ ceilingBounce: v }),
             ),
             toggleCell('physicsPetCollision', physics.petCollision, busy, (v) => props.onChange({ petCollision: v })),
+            toggleCell('physicsHaptic', physics.hapticEnabled !== false, busy, (v) =>
+              props.onChange({ hapticEnabled: v }),
+            ),
           ],
         }),
       ],

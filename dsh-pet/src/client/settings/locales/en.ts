@@ -157,6 +157,9 @@ export const en: Record<Key, string> = {
     'Turn this off to let a throw fly out through the top of the screen (gravity still pulls it back)',
   physicsPetCollision: 'Pet collisions',
   physicsPetCollisionHint: 'A flying pet bounces off the others with momentum conservation (mass ∝ size²)',
+  physicsHaptic: 'Collision haptics',
+  physicsHapticHint:
+    'One buzz per hit (walls, floor, ceiling, other pets). Works in Chrome/Edge; not on iOS or WebView shells like Via. Do Not Disturb blocks it.',
   invalidPhysics: 'Check the physics values: gravity / ground friction ≥ 0, bounciness 0–1, throw power > 0.',
   fontTitle: 'Appearance & font',
   fontHint:

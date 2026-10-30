@@ -157,6 +157,9 @@ export const de: Record<Key, string> = {
   physicsCeilingBounceHint: 'Aus: Würfe können oben aus dem Bildschirm fliegen (die Schwerkraft holt sie zurück)',
   physicsPetCollision: 'Pet-Kollisionen (petCollision)',
   physicsPetCollisionHint: 'Ein fliegendes Pet prallt mit Impulserhaltung von anderen ab (Masse ∝ Größe²)',
+  physicsHaptic: 'Kollisions-Vibration',
+  physicsHapticHint:
+    'Ein Impuls pro Treffer (Wand, Boden, Decke, andere Pets). Funktioniert in Chrome/Edge; nicht auf iOS oder in WebView-Hüllen wie Via. „Nicht stören“ blockiert die Vibration.',
   invalidPhysics: 'Bitte Physikwerte prüfen: Schwerkraft / Bodenreibung ≥ 0, Elastizität 0–1, Wurfkraft > 0.',
   fontTitle: 'Aussehen & Schrift',
   fontHint:

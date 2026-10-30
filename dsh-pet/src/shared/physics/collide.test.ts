@@ -103,6 +103,12 @@ describe('collidePet —— 一次弹性分离', () => {
     assert.ok(Math.abs(out.hvy - -11) < 1e-9, `被撞宠切向应保持 -11，实际 ${out.hvy}`);
   });
 
+  test('impactSpeed 就是法向接近速度（触觉强度按它换算）', () => {
+    const out = collidePet(pet(0, 0, 120, 0), pet(500, 0, 20, 0));
+    assert.ok(out);
+    assert.ok(Math.abs(out.impactSpeed - 100) < 1e-9, `应为 120-20=100，实际 ${out.impactSpeed}`);
+  });
+
   test('恢复系数小于 1：相对法向速度的绝对值被按 e 缩小', () => {
     const fly = pet(0, 0, 100, 0);
     const hit = pet(500, 0, -100, 0);

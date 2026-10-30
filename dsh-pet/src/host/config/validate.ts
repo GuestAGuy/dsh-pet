@@ -84,7 +84,7 @@ function weightsValid(w: unknown): boolean {
 }
 
 /** physics 段校验：gravity ≥ 0（0 = 无重力，合法）、restitution ∈ [0,1]、groundFriction ≥ 0（均为有限数字）、
- *  ceilingBounce 为布尔、throwPower > 0（有限数字）、petCollision 为布尔 */
+ *  ceilingBounce / petCollision / hapticEnabled 为布尔、throwPower > 0（有限数字） */
 export function physicsValid(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const p = value as Record<string, unknown>;
@@ -103,7 +103,9 @@ export function physicsValid(value: unknown): boolean {
     typeof p.ceilingBounce === 'boolean' &&
     Number.isFinite(tp) &&
     tp > 0 &&
-    typeof p.petCollision === 'boolean'
+    typeof p.petCollision === 'boolean' &&
+    // 可选：旧配置（与手写配置）没有这个键，缺省即开启——缺键不算整段非法。
+    (p.hapticEnabled === undefined || typeof p.hapticEnabled === 'boolean')
   );
 }
 

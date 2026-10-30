@@ -842,6 +842,16 @@ describe('saveUserConfig —— 物理参数 physics（白名单 + 透传保留�
     assert.equal((out?.physics as Record<string, unknown>).throwPower, 2);
   });
 
+  test('hapticEnabled：缺键合法（旧配置按默认开），非布尔整段拒绝', () => {
+    const missing: Record<string, unknown> = { ...PHYS };
+    delete missing.hapticEnabled;
+    const kept = saveOnce({ pets: PETS, physics: missing });
+    assert.ok(kept, '缺键不该被整段拒绝');
+    assert.equal('hapticEnabled' in (kept?.physics as Record<string, unknown>), false, '没写就不凭空补键');
+    assert.ok(saveOnce({ pets: PETS, physics: { ...PHYS, hapticEnabled: false } }), '显式关了要能落盘');
+    assert.equal(saveOnce({ pets: PETS, physics: { ...PHYS, hapticEnabled: 'yes' } }), null);
+  });
+
   test('非法值 → 整体拒绝（宿主回 400；与读取侧 physicsValid 同一套规则）', () => {
     const bad: Array<[string, unknown]> = [
       ['restitution > 1', { ...PHYS, restitution: 1.5 }],
