@@ -7,7 +7,7 @@
 //     写了就取代所属条目顶层那一份，留空则跟随条目（设置页有输入框）
 //   · 全局默认（本文件是默认值；用户在 main-config.jsonc 里写一次就对**所有宠物**生效，
 //     含 pet/<名>-config.json 定义的种类；种类文件自己写了则覆盖自己那份）：
-//     physics / font / confineToScreen / whisperImageEnabled / chatImageEnabled /
+//     physics / font / confineToScreen / whisperImageEnabled / chatImageEnabled / chatAnimationEnabled /
 //     chatMemoryRounds / whisperModel / chatModel / eventsRefreshSec
 //   · 条目级（每个条目一份：main 一份、每个种类各一份；种类文件顶层可覆盖）：
 //     whisperPrompt / memes / workStatusTexts / animations / animationWeights
@@ -66,6 +66,12 @@
   // 模型不选或选了不存在的图则不配图（对话配图是可选点缀，不强制每句都带）。
   // 必填布尔值；缺失即配置错误。改动后刷新或重启生效。
   "chatImageEnabled": true,
+  // ===================== 对话动作联动（全局默认，所有宠物共用；种类文件顶层可覆盖） =====================
+  // 开启后，对话时会把「可表演的动画清单」交给模型：模型认为这句话确实在演某个动作时，
+  // 回复里会带一个动作标记，宠物当场演出来；没有合适的就只回文字，不演。
+  // 联动范围 = animations.categories 下全部动作（不是全部动画：待机 / 转向 / 事件动画不在其中）。
+  // 必填布尔值；缺失即配置错误。改动后刷新或重启生效。
+  "chatAnimationEnabled": true,
   // ===================== 表情包：对话配图张数上限（全局默认，所有宠物共用；种类文件顶层可覆盖） =====================
   // 对话时发给模型的表情包清单**最多几张**（「前 N 张」= 配置里**写在前面的那 N 条**——
   // 想让哪几张优先被发出去，把它们的顺序往前挪即可；本文件里的书写顺序就是生效顺序）。

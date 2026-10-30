@@ -227,6 +227,7 @@ describe('buildSaveBody —— 请求体字段', () => {
       clickSoundEnabled: false,
       whisperImageEnabled: false,
       chatImageEnabled: false,
+      chatAnimationEnabled: false,
       confineToScreen: false,
       trayEnabled: true,
       voiceEnabled: true,
@@ -239,6 +240,7 @@ describe('buildSaveBody —— 请求体字段', () => {
       font: {},
     } as unknown as SaveFields;
     assert.deepEqual(Object.keys(buildSaveBody(fields)).sort(), [
+      'chatAnimationEnabled',
       'chatImageEnabled',
       'chatImageLimit',
       'chatMemoryRounds',
@@ -266,6 +268,7 @@ describe('buildSaveBody —— 请求体字段', () => {
       clickSoundEnabled: true,
       whisperImageEnabled: true,
       chatImageEnabled: true,
+      chatAnimationEnabled: true,
       confineToScreen: true,
       trayEnabled: false,
       physics: { gravity: 3 },

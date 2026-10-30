@@ -580,6 +580,42 @@ describe('saveUserConfig —— 表情包配图开关（白名单 + 透传保留
   });
 });
 
+describe('saveUserConfig —— 对话动作联动开关（白名单 + 透传保留）', () => {
+  test('随请求体写入，缺省不凭空造字段', () => {
+    const out = saveOnce({ pets: PETS, chatAnimationEnabled: false });
+    assert.equal(out?.chatAnimationEnabled, false);
+    assert.equal('chatAnimationEnabled' in (saveOnce({ pets: PETS }) ?? {}), false);
+  });
+
+  test('传非布尔 → 整体拒绝（宿主回 400）', () => {
+    assert.equal(saveOnce({ pets: PETS, chatAnimationEnabled: 'yes' }), null);
+  });
+
+  test('请求体传了就覆盖磁盘旧值', () => {
+    const out = saveOnce({ pets: PETS, chatAnimationEnabled: true }, { pets: PETS, chatAnimationEnabled: false });
+    assert.equal(out?.chatAnimationEnabled, true);
+  });
+});
+
+describe('readAllConfig —— 对话动作联动开关合并（用户层可覆盖 / 非法回退默认）', () => {
+  test('内置默认 true；用户层写 false → 读 false', () => {
+    assert.equal(readAllConfig(withBase({ chatAnimationEnabled: true })).main.chatAnimationEnabled, true);
+    assert.equal(
+      readAllConfig(withBase({ chatAnimationEnabled: true }, { chatAnimationEnabled: false })).main
+        .chatAnimationEnabled,
+      false,
+    );
+  });
+
+  test('用户层写了非法值 → 回退内置默认', () => {
+    assert.equal(
+      readAllConfig(withBase({ chatAnimationEnabled: true }, { chatAnimationEnabled: 'yes' })).main
+        .chatAnimationEnabled,
+      true,
+    );
+  });
+});
+
 describe('readAllConfig —— 表情包开关合并（缺失取默认 / 非法回退默认）', () => {
   test('内置默认有值 → 用户层没写时读得到', () => {
     const merged = readAllConfig(withBase({ whisperImageEnabled: true, chatImageEnabled: false }));
@@ -1098,8 +1134,9 @@ describe('syncUserConfigFromDefault —— 同步（内置默认原文写入用�
 /**
  * 文件宠物条目的基座 —— 「全局默认 + 种类可覆盖」。
  *
- * 判据：GLOBAL_DEFAULT_KEYS 那 9 个（physics / confineToScreen / 两个配图开关 / chatImageLimit /
- * chatMemoryRounds / whisperModel / chatModel / eventsRefreshSec）是用户级「成本 / 偏好 /
+ * 判据：GLOBAL_DEFAULT_KEYS 列出的字段（physics / confineToScreen / 两个配图开关 /
+ * 对话动作联动开关 / chatImageLimit / chatMemoryRounds / whisperModel / chatModel /
+ * eventsRefreshSec 等）是用户级「成本 / 偏好 /
  * 环境 / 节奏」参数，用户层写了就对所有条目生效（含 pet pack）；种类文件自己写了就覆盖
  * 自己那份。其余顶层字段（人设 / 表情包 / 动画池 / 文案）的基座仍是内置默认——
  * 一个种类一份人设、一份池、一个表情包目录，各写一份才是 pet pack 的意义。
@@ -1110,6 +1147,7 @@ describe('文件宠物条目 —— 全局默认（用户层作基座）+ 种类
     ...BASE,
     whisperImageEnabled: true,
     chatImageEnabled: true,
+    chatAnimationEnabled: true,
     chatImageLimit: 0,
     confineToScreen: false,
     whisperModel: { provider: '', model: '' },
@@ -1157,13 +1195,14 @@ describe('文件宠物条目 —— 全局默认（用户层作基座）+ 种类
     }
   }
 
-  test('用户层写了这 9 个字段 → 种类条目逐个继承（不再只吃内置默认）', () => {
+  test('用户层写了这 10 个字段 → 种类条目逐个继承（不再只吃内置默认）', () => {
     const out = merged({
       overlay: {
         physics: { ...(BASE_FULL.physics as Record<string, unknown>), petCollision: true, gravity: 999 },
         confineToScreen: true,
         whisperImageEnabled: false,
         chatImageEnabled: false,
+        chatAnimationEnabled: false,
         chatImageLimit: 4,
         chatMemoryRounds: 9,
         whisperModel: { provider: 'p1', model: 'm1' },
@@ -1178,6 +1217,7 @@ describe('文件宠物条目 —— 全局默认（用户层作基座）+ 种类
     assert.equal(pig.confineToScreen, true);
     assert.equal(pig.whisperImageEnabled, false);
     assert.equal(pig.chatImageEnabled, false);
+    assert.equal(pig.chatAnimationEnabled, false, 'chatAnimationEnabled 应继承用户层');
     assert.equal(pig.chatImageLimit, 4, 'chatImageLimit 应继承用户层');
     assert.equal(pig.chatMemoryRounds, 9);
     assert.deepEqual(pig.whisperModel, { provider: 'p1', model: 'm1' });

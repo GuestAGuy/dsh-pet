@@ -71,7 +71,7 @@ export function apply(ctx: any): void {
     notifyActivityTimers,
     scheduleCompletionNotify,
   } = sessionNotify;
-  const chatMemory = createChatMemory({ ctx, configPaths, log, memeDirsFor, state, userRoot });
+  const chatMemory = createChatMemory({ ctx, configPaths, log, memeDirsFor, playback, state, userRoot });
   const { lastWhisperAt, publishWhisper, publishSleepTalk, chatWithPet, getActivePetId, setActivePetId } = chatMemory;
 
   const balancePoll = createBalancePoll({ ctx, configPaths, getActivePetId, log, state });

@@ -17,6 +17,7 @@ import {
   memeUrl,
   memoryBoundaryIndex,
   personaText,
+  playAction,
   toChatMessages,
 } from './api.ts';
 
@@ -117,6 +118,21 @@ describe('toChatMessages —— 图信息', () => {
       assert.equal(list[0]?.text, '嗨');
     }
   });
+
+  test('assistant 带动作名 → 记下 action，供喇叭右边的重播按钮用', () => {
+    const list = toChatMessages({
+      messages: [{ role: 'assistant', content: '好耶', ts: 1, action: '优雅女仆舞' }],
+    });
+    assert.equal(list[0]?.action, '优雅女仆舞');
+    assert.equal(list[0]?.meme, undefined);
+  });
+
+  test('动作名空串或非字符串 → 当作没演动作', () => {
+    for (const bad of ['', 42, null, {}]) {
+      const list = toChatMessages({ messages: [{ role: 'assistant', content: '嗯', ts: 1, action: bad }] });
+      assert.equal(list[0]?.action, undefined);
+    }
+  });
 });
 
 describe('取图地址', () => {
@@ -130,6 +146,45 @@ describe('取图地址', () => {
   test('memeUrl 带素材根；素材根为空时退回两段形式', () => {
     assert.equal(memeUrl('可爱', 'main'), '/dsh-pet-7340/pic/memes/main/%E5%8F%AF%E7%88%B1.png');
     assert.equal(memeUrl('可爱', '  '), '/dsh-pet-7340/pic/memes/%E5%8F%AF%E7%88%B1.png');
+  });
+});
+
+describe('playAction —— 重播动作走 /anim', () => {
+  /** 用给定响应替身跑一次，回收请求与返回值。 */
+  async function withFetch<T>(
+    body: unknown,
+    run: () => Promise<T>,
+  ): Promise<{ calls: { url: string; method: string; body: unknown }[]; value: T }> {
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ url: String(input), method: init?.method ?? 'GET', body: init?.body });
+      return new Response(JSON.stringify(body), { status: 200 });
+    }) as typeof fetch;
+    try {
+      return { calls, value: await run() };
+    } finally {
+      globalThis.fetch = original;
+    }
+  }
+
+  test('POST /anim?pet=&surface=any，body 只带动作名', async () => {
+    const { calls, value } = await withFetch({ ok: true, playbackId: 'pb_1' }, () => playAction('main', '优雅女仆舞'));
+    assert.deepEqual(
+      calls.map((call) => call.url),
+      // surface 是 /anim 的必填项：缺了它宿主直接 400，按钮会表现为「点了没反应」
+      ['/dsh-pet-7340/anim?pet=main&surface=any'],
+    );
+    assert.equal(calls[0]?.method, 'POST');
+    assert.deepEqual(JSON.parse(String(calls[0]?.body)), { name: '优雅女仆舞' });
+    assert.equal(value, true);
+  });
+
+  test('宿主拒绝（名字不在池内 / 宠物没在显示）→ 返回 false，不抛错', async () => {
+    const { value } = await withFetch({ ok: false, reason: 'unknown-animation' }, () =>
+      playAction('main', '不存在的动作'),
+    );
+    assert.equal(value, false);
   });
 });
 

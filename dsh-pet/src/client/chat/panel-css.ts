@@ -346,8 +346,9 @@ export const PANEL_CSS = `
   color: var(--dsw-alias-label-caption);
 }
 
-/* 时间右边的播报按钮：与时间同字号，靠透明度与颜色表意，不占额外行高 */
-.pet-chat-speak {
+/* 时间右边的播报 / 动作按钮：与时间同字号，靠透明度与颜色表意，不占额外行高 */
+.pet-chat-speak,
+.pet-chat-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -366,8 +367,17 @@ export const PANEL_CSS = `
     color 0.15s;
 }
 
-.pet-chat-speak:hover {
+.pet-chat-speak:hover,
+.pet-chat-action:hover {
   opacity: 1;
+}
+
+/* 动作键图标：内联 SVG 单色三角，颜色跟行内文字走。
+   换成 emoji（▶️）会渲染成一块彩色方块，和喇叭放在一起就是两种风格。 */
+.pet-chat-action-icon {
+  display: block;
+  width: ${px(SIZE.hairline * 5)};
+  height: ${px(SIZE.hairline * 5)};
 }
 
 /* 生成中：只有上半圈带色的细环，靠旋转表达「在生成」。

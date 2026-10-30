@@ -91,6 +91,9 @@ export function saveUserConfig(
   if (wie !== undefined && typeof wie !== 'boolean') return null;
   const cie = o.chatImageEnabled;
   if (cie !== undefined && typeof cie !== 'boolean') return null;
+  // 对话动作联动开关（全局布尔）：与上面几个开关同一套语义——传了必须是布尔，没传走透传保留
+  const cae = o.chatAnimationEnabled;
+  if (cae !== undefined && typeof cae !== 'boolean') return null;
   const cts = o.confineToScreen;
   if (cts !== undefined && typeof cts !== 'boolean') return null;
   // 语音播报开关与音色（全局）：与上面几个布尔同语义；音色必须落在白名单内，
@@ -145,6 +148,7 @@ export function saveUserConfig(
   if (cse !== undefined) outConfig.clickSoundEnabled = cse;
   if (wie !== undefined) outConfig.whisperImageEnabled = wie;
   if (cie !== undefined) outConfig.chatImageEnabled = cie;
+  if (cae !== undefined) outConfig.chatAnimationEnabled = cae;
   if (cts !== undefined) outConfig.confineToScreen = cts;
   if (ve !== undefined) outConfig.voiceEnabled = ve;
   if (vn !== undefined) outConfig.voiceName = vn;
@@ -167,6 +171,7 @@ export function saveUserConfig(
   if (cse !== undefined) bodyOwned.add('clickSoundEnabled');
   if (wie !== undefined) bodyOwned.add('whisperImageEnabled');
   if (cie !== undefined) bodyOwned.add('chatImageEnabled');
+  if (cae !== undefined) bodyOwned.add('chatAnimationEnabled');
   if (cts !== undefined) bodyOwned.add('confineToScreen');
   if (ve !== undefined) bodyOwned.add('voiceEnabled');
   if (vn !== undefined) bodyOwned.add('voiceName');

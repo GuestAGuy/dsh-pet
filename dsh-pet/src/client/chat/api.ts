@@ -8,6 +8,7 @@
 import { sendChat, type ChatAttachment } from '../../shared/chat/send.ts';
 import { flattenConfigPets } from '../../shared/config.ts';
 import { ROUTE_PATH } from '../../shared/constants.ts';
+import { postAction } from '../../shared/state.ts';
 import type { Pet } from '../../shared/types.ts';
 
 /** 消息里带的图片引用（与宿主 `PetImageRef` 同形，只取显示用到的字段）。 */
@@ -28,6 +29,8 @@ export interface ChatMessageView {
   readonly image?: ChatImageRef;
   /** 该轮 AI 配的表情包名（`/pic/memes` 取回）；缺省 = 没配图。 */
   readonly meme?: string;
+  /** 该轮 AI 表演的动作名（重播按钮的入参）；缺省 = 没演动作。 */
+  readonly action?: string;
 }
 
 /** 一轮对话：一问一答共享同一个 ts，缺一侧（例如删过）也只占一轮。 */
@@ -72,12 +75,14 @@ export function toChatMessages(body: unknown): ChatMessageView[] {
     if (role === undefined || typeof m.content !== 'string') continue;
     const image = imageRefOf(m.image);
     const meme = typeof m.meme === 'string' && m.meme !== '' ? m.meme : undefined;
+    const action = typeof m.action === 'string' && m.action !== '' ? m.action : undefined;
     out.push({
       role,
       text: m.content,
       ts: typeof m.ts === 'number' ? m.ts : 0,
       ...(image === undefined ? {} : { image }),
       ...(meme === undefined ? {} : { meme }),
+      ...(action === undefined ? {} : { action }),
     });
   }
   return out;
@@ -107,6 +112,21 @@ export function groupRounds(messages: readonly ChatMessageView[]): ChatRound[] {
 
 /** 插件 logo 地址：对话面板拿它当宠物头像。 */
 export const LOGO_URL = ROUTE_PATH + '/logo';
+
+/**
+ * 让宠物重演一次记忆里记下的动作（聊天窗口「播放动作」按钮）。
+ *
+ * 走 `/anim` 而不是直接改 state：白名单校验、占用锁与显示端门禁、播放回执都由宿主那一条链路负责。
+ *
+ * @param petId - 宠物 id。
+ * @param name - 记忆里记下的动作名（来自 `animations.categories`）。
+ * @returns 是否受理成功；失败只留日志，不弹错误条——它只是重播，不影响对话主流程。
+ */
+export async function playAction(petId: string, name: string): Promise<boolean> {
+  // surface=any：与对话同口径——重播不要求特定一端，宠物在哪端渲染就哪端播。
+  // /anim 的 surface 是必填项（缺省直接 400），这里不能省。
+  return postAction(ROUTE_PATH + '/anim?pet=' + encodeURIComponent(petId) + '&surface=any', { name });
+}
 
 /** 附件引用 → 取图地址（宿主按内容哈希回字节）。 */
 export function attachmentUrl(ref: ChatImageRef): string {

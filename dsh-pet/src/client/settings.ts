@@ -130,6 +130,8 @@ export function makePetConfigSection(rt: SettingsRuntime): FunctionComponent<{ c
     // 表情包配图开关（全局）：切换只改本地状态，随「保存」一起提交。
     const [whisperImage, setWhisperImage] = useState(false);
     const [chatImage, setChatImage] = useState(false);
+    // 对话动作联动开关（全局）：同上，随「保存」一起提交；初值仅占位，加载成功后由成品值覆盖。
+    const [chatAnimation, setChatAnimation] = useState(true);
     // 抛掷锁定开关（全局）：切换只改本地状态，随「保存」一起提交。
     const [confineScreen, setConfineScreen] = useState(false);
     // 系统托盘开关（全局）：随「保存」一起提交；宿主半侧据此决定建不建托盘、没桌面宠物时还值不值得常驻 Helper。
@@ -166,6 +168,7 @@ export function makePetConfigSection(rt: SettingsRuntime): FunctionComponent<{ c
         if (patch.clickSoundEnabled !== undefined) setClickSound(patch.clickSoundEnabled);
         if (patch.whisperImageEnabled !== undefined) setWhisperImage(patch.whisperImageEnabled);
         if (patch.chatImageEnabled !== undefined) setChatImage(patch.chatImageEnabled);
+        if (patch.chatAnimationEnabled !== undefined) setChatAnimation(patch.chatAnimationEnabled);
         if (patch.confineToScreen !== undefined) setConfineScreen(patch.confineToScreen);
         if (patch.trayEnabled !== undefined) setTrayEnabled(patch.trayEnabled);
         if (patch.voiceEnabled !== undefined) setVoiceEnabled(patch.voiceEnabled);
@@ -201,22 +204,24 @@ export function makePetConfigSection(rt: SettingsRuntime): FunctionComponent<{ c
     // 文件宠物条目数：只用于标题提示「另 n 只来自 pet/ 目录」。
     const packCount = kinds.filter((item) => item.kind === 'pack').length;
 
-    // 六个全局开关的当前值：卡片只认这个对象，键名与成品配置字段同名。
+    // 七个全局开关的当前值：卡片只认这个对象，键名与成品配置字段同名。
     const globalFlags: GlobalFlags = {
       notificationsEnabled: notifyEnabled,
       clickSoundEnabled: clickSound,
       whisperImageEnabled: whisperImage,
       chatImageEnabled: chatImage,
+      chatAnimationEnabled: chatAnimation,
       confineToScreen: confineScreen,
       trayEnabled,
     };
 
-    // 通知开关要借用户手势申请权限，其余五个是纯 setState；统一成「键名 → setter」的查表，避免长 switch。
+    // 通知开关要借用户手势申请权限，其余六个是纯 setState；统一成「键名 → setter」的查表，避免长 switch。
     const globalSetters: Record<GlobalFlagKey, (value: boolean) => void> = {
       notificationsEnabled: (value) => void toggleNotify(value),
       clickSoundEnabled: setClickSound,
       whisperImageEnabled: setWhisperImage,
       chatImageEnabled: setChatImage,
+      chatAnimationEnabled: setChatAnimation,
       confineToScreen: setConfineScreen,
       trayEnabled: setTrayEnabled,
     };
@@ -242,6 +247,7 @@ export function makePetConfigSection(rt: SettingsRuntime): FunctionComponent<{ c
         clickSoundEnabled: clickSound,
         whisperImageEnabled: whisperImage,
         chatImageEnabled: chatImage,
+        chatAnimationEnabled: chatAnimation,
         confineToScreen: confineScreen,
         trayEnabled,
         voiceEnabled,

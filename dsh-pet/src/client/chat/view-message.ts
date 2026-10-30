@@ -38,6 +38,31 @@ function speakNode(h: ChatPanelRuntime['h'], text: string, ts: number, state: Ch
 }
 
 /**
+ * 动作播放按钮：这一轮回答演出过动作时，贴在喇叭右边，悬浮显示动作名，点一下重演。
+ *
+ * 悬浮气泡只显示动作名本身（不加「播放动作：」这类前缀）；读屏需要的语义放在 aria-label 上。
+ */
+function actionNode(h: ChatPanelRuntime['h'], action: string, state: ChatPanelState): unknown {
+  return h('button', {
+    type: 'button',
+    className: 'pet-chat-action',
+    'aria-label': '播放动作：' + action,
+    ...tipAttrs(action),
+    onClick: (event: { stopPropagation: () => void }) => {
+      // 多选模式下整轮可点：这里必须拦一下，否则点动作键会顺手切换选中
+      event.stopPropagation();
+      state.playAction(action);
+    },
+    children: h('svg', {
+      className: 'pet-chat-action-icon',
+      viewBox: '0 0 16 16',
+      'aria-hidden': 'true',
+      children: h('path', { d: 'M4.5 2.5v11l9-5.5z', fill: 'currentColor' }),
+    }),
+  });
+}
+
+/**
  * 头像：宠物用插件 logo，我是一只 Q 版小脸（圆脸 + 呆毛 + 腮红 + 星星）。
  *
  * 画成内联 SVG 而不是图片：能直接用主题 token（深浅色自动跟随），也不用多一个资源请求。
@@ -203,6 +228,8 @@ export function roundNode(
                   formatStamp(round.ts, Date.now()),
                   // 只有回答那句能点播：用户自己的话没有语音
                   round.assistant === undefined ? null : speakNode(h, round.assistant.text, round.ts, state),
+                  // 动作键贴在喇叭右边：这一轮没演动作时整块不出现
+                  round.assistant?.action === undefined ? null : actionNode(h, round.assistant.action, state),
                 ],
               })
             : null,

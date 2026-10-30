@@ -7,6 +7,7 @@
  */
 import { join } from 'node:path';
 import { generateChat, type ChatMemoryMessage } from '../chat.ts';
+import { chatActionNames } from '../chat-action.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { composeSystemPrompt, petPersona } from '../persona.ts';
 import { findPetInstance, readAllConfig, removeRoundsByTs, sliceMemoryRounds } from '../config.ts';
@@ -32,6 +33,7 @@ export type ChatMemoryInput = {
 } & Pick<HostSetup, 'configPaths'> &
   Pick<HostSetup, 'log'> &
   Pick<HostSetup, 'memeDirsFor'> &
+  Pick<HostSetup, 'playback'> &
   Pick<HostSetup, 'state'> &
   Pick<HostSetup, 'userRoot'>;
 
@@ -39,7 +41,7 @@ export type ChatMemoryInput = {
  * 创建对话与记忆。
  */
 export function createChatMemory(deps: ChatMemoryInput) {
-  const { ctx, configPaths, log, memeDirsFor, state, userRoot } = deps;
+  const { ctx, configPaths, log, memeDirsFor, playback, state, userRoot } = deps;
   // 命令「当前桌宠」（/pet 选择、/chat 使用）：全局单值不分会话；进程内内存，重启回默认第一只
   let activePetId = '';
 
@@ -236,6 +238,8 @@ export function createChatMemory(deps: ChatMemoryInput) {
         found.conf.chatImageEnabled === true
           ? limitPool(readMemePool(found.conf.memes, memeDirsFor(found.entry)), Number(found.conf.chatImageLimit))
           : [];
+      // 动作名单：开关开启才取（关掉 = 不注入也不解析）；名单本身为空（没配 categories）同样等于关闭。
+      const actions = found.conf.chatAnimationEnabled === true ? chatActionNames(found.conf.animations) : [];
       const mem = await readMemory();
       // 坏结构（数组/标量）按空桶重建；messages 不是数组的条目按新会话处理，避免 push 到坏对象上崩溃
       const bucket =
@@ -264,6 +268,7 @@ export function createChatMemory(deps: ChatMemoryInput) {
         history: list,
         userText: text,
         pool,
+        actions,
         preferred: configuredModel(found.conf, 'chatModel'),
         image,
       });
@@ -277,16 +282,28 @@ export function createChatMemory(deps: ChatMemoryInput) {
         content: generated.text,
         ts: now,
         ...(generated.image ? { meme: generated.image } : {}),
+        // 动作名与配图名同类：只存不送——历史回放只带正文，否则每轮都会把动作标记重发一遍
+        ...(generated.action ? { action: generated.action } : {}),
       });
       await writeMemory(mem);
+      // 动作先写：与 POST /anim 同一条写回链路（记录 + anim 叶子），渲染端据此播放并回报执。
+      if (generated.action !== undefined) {
+        const record = playback.create(petId, generated.action);
+        state.writePet(petId, 'anim', { name: generated.action, playbackId: record.playbackId });
+      }
       // 回复写进 S（与碎碎念同一个叶子：前端本来就是同一条展示链路）。
       // 该由哪一端念按这只宠物的 display 推：对话请求带的是 surface=any，本来就没有具体的一端可用。
       const replyVoiceTo = voiceTargetFor(found.pet);
-      state.writePet(petId, 'say', {
-        text: generated.text,
-        ...(generated.image ? { image: generated.image } : {}),
-        ...(replyVoiceTo ? { voiceTo: replyVoiceTo } : {}),
-      });
+      // 只有动作没有正文（模型只写了标记）→ 不写 say，避免弹一个空气泡。
+      if (generated.text !== '') {
+        state.writePet(petId, 'say', {
+          text: generated.text,
+          ...(generated.image ? { image: generated.image } : {}),
+          // 带动作时显式关掉碎碎念动画：气泡照弹，但不把刚点播的动作顶掉
+          ...(generated.action !== undefined ? { anim: false } : {}),
+          ...(replyVoiceTo ? { voiceTo: replyVoiceTo } : {}),
+        });
+      }
       // 同一份文本随返回值带出（叶子照写，不是二选一）
       return { ok: true as const, text: generated.text, ...(generated.image ? { image: generated.image } : {}) };
     });

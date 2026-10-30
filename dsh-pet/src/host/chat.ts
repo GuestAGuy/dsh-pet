@@ -11,6 +11,7 @@
  */
 
 import { BlockAssembler, createAssistantMessage, createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm';
+import { actionInstruction, extractChatAction } from './chat-action.ts';
 import type { PetImageRef } from './image-attachment.ts';
 import { PET_CALL_IDENTITY, noTextReason } from './llm-call.ts';
 import { supportsReasoningOff } from './llm-reasoning.ts';
@@ -20,7 +21,7 @@ import { modelCandidates, modelLabel, type ModelRef } from './model-selection.ts
 
 /** 生成失败原因（与 shared/whisper.ts 的 WhisperState 失败分支同构）。 */
 export type ChatGenerateResult =
-  | { ok: true; text: string; image?: string }
+  | { ok: true; text: string; image?: string; action?: string }
   | { ok: false; reason: 'provider-missing' | 'generate-error'; message?: string };
 
 /** 记忆中的一条消息：GET /chat 返回的窗口条目就是它。 */
@@ -32,6 +33,8 @@ export interface ChatMemoryMessage {
   image?: PetImageRef;
   /** 该轮 AI 配的表情包名称（不是条目对象）；只存不送——不进上下文。 */
   meme?: string;
+  /** 该轮 AI 表演的动作名（animations.categories 内的名字）；只存不送——不进上下文。 */
+  action?: string;
 }
 
 /** 单次生成超时（ms）：对话等 LLM 回复，60s 足够。 */
@@ -47,6 +50,8 @@ function imageInstruction(pool: MemeEntry[]): string {
   );
 }
 
+/** 动作指令与动作标记的解析都在 ./chat-action：它们只服务对话这条路径，与 /anim 的决策层分开。 */
+
 /** 一次对话生成的输入。 */
 export interface ChatGenerateInput {
   /** 宿主上下文（注入 agentDefaultModel / llm）。 */
@@ -59,6 +64,8 @@ export interface ChatGenerateInput {
   readonly userText: string;
   /** 表情包候选池；空 / 缺省 = 纯文本（指令与解析都不介入）。 */
   readonly pool?: readonly MemeEntry[];
+  /** 可表演的动作名单（对话联动开关开启时传，来自 animations.categories）；空 / 缺省 = 不注入也不解析。 */
+  readonly actions?: readonly string[];
   /** 条目单独指定的模型（chatModel）；缺省 / 留空 = 只用当前对话的模型。 */
   readonly preferred?: ModelRef;
   /** 本轮附带的图片；缺省 = 纯文本请求，数据路径与加入图片前一致。 */
@@ -75,6 +82,8 @@ export async function generateChat(input: ChatGenerateInput): Promise<ChatGenera
   const { ctx, system, history, userText, preferred, image } = input;
   // 表情包侧的读池 / 校验函数按可变数组签名；这里复制一份，避免把调用方数组的引用往下传
   const pool: MemeEntry[] = [...(input.pool ?? [])];
+  // 动作名单同样是「空 = 关闭」：开关关掉或 categories 没配任何动作时，指令与解析都不介入。
+  const actions: string[] = [...(input.actions ?? [])];
   // 候选链：配置的模型优先 → 当前对话的模型兜底（chatModel 留空时链上只有后者）
   const candidates = modelCandidates(ctx, preferred);
   if (candidates.length === 0) {
@@ -89,7 +98,7 @@ export async function generateChat(input: ChatGenerateInput): Promise<ChatGenera
   // 兜底文案与失败分支同源，避免两处字面量漂移
   let last: ChatGenerateResult = { ok: false, reason: 'generate-error', message: noTextReason(undefined) };
   for (const [i, sel] of candidates.entries()) {
-    const result = await generateWith(ctx, { llm, sel, system, history, userText, pool, image });
+    const result = await generateWith(ctx, { llm, sel, system, history, userText, pool, actions, image });
     if (result.ok) return result;
     last = result;
     // 回落要留痕：配的模型没生效时能在日志里看到原因（否则「我明明配了 A，怎么还是用 B」没法查）
@@ -111,12 +120,13 @@ interface GenerateOnce {
   readonly history: readonly ChatMemoryMessage[];
   readonly userText: string;
   readonly pool: MemeEntry[];
+  readonly actions: string[];
   readonly image?: PetImageRef;
 }
 
 /** 用一个确定的 provider/model 跑一次对话生成（失败原样返回结构化原因，不吞）。 */
 async function generateWith(ctx: { llm?: unknown }, once: GenerateOnce): Promise<ChatGenerateResult> {
-  const { llm, sel, system, history, userText, pool, image } = once;
+  const { llm, sel, system, history, userText, pool, actions, image } = once;
   // 历史 → dsh-llm 消息：user 经 createUserMessage（plugin 来源），assistant 经 createAssistantMessage
   // （provider/model 只是消息的角色载体，不涉及适配器回放）
   const historyMessages = history.map((m) =>
@@ -136,10 +146,13 @@ async function generateWith(ctx: { llm?: unknown }, once: GenerateOnce): Promise
   // 无 reasoning 元数据的模型显式传 off 会被 dsh-llm 判为 UNSUPPORTED_REASONING_EFFORT，
   // 折叠成空流（表现为「模型未返回文本」）。
   const supportsOff = await supportsReasoningOff(ctx, sel.provider, sel.model);
-  // 配图：池非空才把清单与指令附进 user 正文（空池 = 关闭配图）
+  // 配图 / 动作：各自的清单非空才把指令附进 user 正文（空 = 该功能关闭）。
+  // 顺序固定「配图在前、动作在后」：配图是既有行为，新增的动作排在它后面，不改既有提示词的位置。
   const wantImage = pool.length > 0;
+  const wantAction = actions.length > 0;
+  const instruction = (wantImage ? imageInstruction(pool) : '') + (wantAction ? actionInstruction(actions) : '');
   const content: Record<string, unknown>[] = [
-    { type: 'text', text: wantImage ? userText + imageInstruction(pool) : userText },
+    { type: 'text', text: instruction === '' ? userText : userText + instruction },
   ];
   // 图片块排在文本块之后：提示词先到、像素后到，模型更容易按提示去看图。
   if (image !== undefined) content.push({ type: 'image', attachment: image });
@@ -185,8 +198,16 @@ async function generateWith(ctx: { llm?: unknown }, once: GenerateOnce): Promise
     .join('')
     .trim();
   if (!text) return { ok: false, reason: 'generate-error', message: noTextReason(assembler.finish) };
-  // 配图解析：命中池内才采纳并剥离标记；未选 / 幻觉名称 → 原样返回纯文本
-  if (!wantImage) return { ok: true, text };
-  const picked = extractChatImage(text, pool);
-  return picked.image ? { ok: true, text: picked.text, image: picked.image } : { ok: true, text: picked.text };
+  if (!wantImage && !wantAction) return { ok: true, text };
+  // 先剥动作再剥配图：两种标记互不依赖，顺序不影响结果；动作的无效名称也会被剥（见 extractChatAction）。
+  const acted: { text: string; action?: string } = wantAction ? extractChatAction(text, actions) : { text };
+  const picked: { text: string; image?: string } = wantImage
+    ? extractChatImage(acted.text, pool)
+    : { text: acted.text };
+  return {
+    ok: true,
+    text: picked.text,
+    ...(picked.image ? { image: picked.image } : {}),
+    ...(acted.action ? { action: acted.action } : {}),
+  };
 }

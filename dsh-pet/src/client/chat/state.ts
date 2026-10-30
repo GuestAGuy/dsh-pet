@@ -6,7 +6,7 @@
  * @module dsh-pet/src/client/chat/state
  */
 import { speakText } from '../../shared/voice.ts';
-import { fetchHistory, groupRounds } from './api.ts';
+import { fetchHistory, groupRounds, playAction as requestPlayAction } from './api.ts';
 import { createHistoryActions, createSendActions, createShellActions } from './actions.ts';
 import { createChatEffects } from './effects.ts';
 import type { ChatPanelRuntime } from './runtime.ts';
@@ -117,6 +117,10 @@ export function createPetChatState(rt: ChatPanelRuntime): () => ChatPanelState {
             return { ...prev, speaking: { ts, phase } };
           });
         });
+      },
+      playAction: (name: string) => {
+        // 没选中宠物时不发请求：空 id 会被宿主按 bad-request 拒掉
+        if (data.petId !== '') void requestPlayAction(data.petId, name);
       },
       clearAttachment: () => patch({ attachment: undefined }),
       showImage: (previewUrl: string) => patch({ previewUrl }),

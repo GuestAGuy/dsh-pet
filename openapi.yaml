@@ -1590,8 +1590,15 @@ paths:
         - 文本超过 **2000 字** → `{ ok: false, reason: 'bad-request' }`。
         - 模型选择：条目配置的 `chatModel` 优先；留空则跟随当前对话的模型。
           指定模型生成失败时会**自动回落到当前对话的模型**重试一次。
-        - 记忆会记下本轮的图片引用与配图名（供聊天记录展示），但历史回放**只带正文**：
-          图信息不进上下文，否则每轮都会把旧图重发一遍给模型。
+        - 记忆会记下本轮的图片引用、配图名与动作名（供聊天记录展示），但历史回放**只带正文**：
+          图信息与动作标记都不进上下文，否则每轮都会把旧图 / 旧动作重发一遍给模型。
+        - **对话动作联动**（配置 `chatAnimationEnabled`，默认开）：开启时把
+          `animations.categories` 下的动作清单附进提示词，模型在语境贴合时于回复末尾写
+          `[动作:名称]`。采纳后与 `POST /anim` 走**同一条写回链路**：先写
+          `pets.<id>.anim`（`name` + `playbackId`），再写 `pets.<id>.say`（带 `anim: false`，
+          气泡不联动碎碎念动画，也不会把刚点播的动作顶掉）；标记会从气泡正文与记忆里剥掉。
+          模型只写标记没有正文时只演动作、不弹气泡。与配图开关相互独立：两者可同时生效、
+          也可只开一个。
       parameters:
         - $ref: "#/components/parameters/PetIdQuery"
         - $ref: "#/components/parameters/SurfaceQuery"
@@ -1826,7 +1833,7 @@ paths:
         - **只白名单字段会被保留**：`pets[]` 的 `id`/`name`/`size`/`balanceEnabled`/
           `whisperEnabled`/`workStatusEnabled`/`fixedEnabled`/`display`/`position`，以及顶层
           `notificationsEnabled`/`clickSoundEnabled`/`whisperImageEnabled`/`chatImageEnabled`/
-          `confineToScreen`/`trayEnabled`/`voiceEnabled`/`voiceName`/`voiceWhisperEnabled`/
+          `chatAnimationEnabled`/`confineToScreen`/`trayEnabled`/`voiceEnabled`/`voiceName`/`voiceWhisperEnabled`/
           `voiceTodoEnabled`/`physics`/`font`/`whisperModel`/`chatModel`/`chatMemoryRounds`/
           `chatImageLimit`。
           其余字段会沿用磁盘上用户文件里的原值（透传保留），所以设置页保存
@@ -3895,7 +3902,7 @@ components:
           enum: [user, assistant]
         content:
           type: string
-          description: 消息正文（不含配图标记）
+          description: 消息正文（不含配图 / 动作标记）
         ts:
           type: integer
           format: int64
@@ -3925,6 +3932,11 @@ components:
           description: |
             该轮 AI 配的表情包名称（配置 memes 的键），只出现在 assistant 消息里；缺失 = 没配图。
             名称可按 `/pic/memes/<素材根>/<名称>.png` 还原成图；只供记录展示，不进上下文。
+        action:
+          type: string
+          description: |
+            该轮 AI 表演的动作名（`animations.categories` 内的名字），只出现在 assistant 消息里；
+            缺失 = 这一轮没有演动作。与 `meme` 同类：只供聊天记录展示，不进上下文。
 
     Provider:
       type: object
@@ -4035,6 +4047,11 @@ components:
           type: boolean
         chatImageEnabled:
           type: boolean
+        chatAnimationEnabled:
+          type: boolean
+          description: |
+            对话动作联动开关（全局默认）：开启后对话时把 `animations.categories` 下的全部动作清单交给模型，
+            由模型在语境贴合时挑一个当场表演；关掉则纯文字。设置页「全局开关」卡里的「对话动作联动」写的就是它。
         confineToScreen:
           type: boolean
         voiceWhisperEnabled:
@@ -4106,6 +4123,9 @@ components:
           type: boolean
         chatImageEnabled:
           type: boolean
+        chatAnimationEnabled:
+          type: boolean
+          description: 对话动作联动开关（开启后模型可从 categories 的动作里挑一个当场表演）
         chatImageLimit:
           type: integer
           minimum: 0

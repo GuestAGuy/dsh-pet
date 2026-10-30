@@ -106,6 +106,9 @@ export const zh = {
   chatImageToggle: '对话配图',
   chatImageToggleHint:
     '对话时由 AI 按当前语境从表情包池挑一张配图（可不挑；图片映射在配置文件顶层 memes）。token：每条消息都要把整张清单附进请求，当前约 1.1k 字符（≈650 token，约碎碎念配图的 11 倍），并随图片数量线性增长；关掉则一个字符都不附。',
+  chatAnimationToggle: '对话动作联动',
+  chatAnimationToggleHint:
+    '开启后，对话时会把可表演的动作清单（animations.categories 下的全部动作）交给模型：模型认为这句话确实在演某个动作时，宠物当场演出来；没有合适的就只回文字。token：每条消息都要附整张动作清单，关掉则一个名字都不附。全局默认，所有宠物共用（pet pack 可在自己种类文件里覆盖）。',
   confineToggle: '锁定在当前屏幕',
   confineToggleHint:
     '多屏用户：开了之后宠物只在当前所在那块屏幕内活动——甩出去的宠物只在松手时所在那块屏内弹（屏缝当墙，不飞到隔壁屏），自主漫游也只在当前所在那块屏内走（越出屏缝的那一步直接取消）。关掉则照常跨屏飞行 / 跨屏行走。只影响桌面模式——浏览器 overlay 本来就只在视口内活动。',

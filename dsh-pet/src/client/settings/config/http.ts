@@ -33,6 +33,8 @@ export interface SaveFields {
   clickSoundEnabled: boolean;
   whisperImageEnabled: boolean;
   chatImageEnabled: boolean;
+  /** 对话动作联动开关。 */
+  chatAnimationEnabled: boolean;
   confineToScreen: boolean;
   trayEnabled: boolean;
   /** 语音播报总开关。 */
@@ -71,6 +73,7 @@ export function buildSaveBody(fields: SaveFields): Record<string, unknown> {
     clickSoundEnabled: fields.clickSoundEnabled,
     whisperImageEnabled: fields.whisperImageEnabled,
     chatImageEnabled: fields.chatImageEnabled,
+    chatAnimationEnabled: fields.chatAnimationEnabled,
     confineToScreen: fields.confineToScreen,
     trayEnabled: fields.trayEnabled,
     voiceEnabled: fields.voiceEnabled,

@@ -87,6 +87,8 @@ export interface ChatPanelState extends PanelData {
   readonly setDraft: (text: string) => void;
   /** 点播某一轮的回答：请求合成 → 播放 → 归位，阶段写进 {@link PanelData.speaking}。 */
   readonly speakRound: (ts: number, text: string) => void;
+  /** 让宠物重演某一轮回答里演过的动作（名称来自记忆里的 `action`）。 */
+  readonly playAction: (name: string) => void;
   readonly pickFile: (file: File) => void;
   readonly clearAttachment: () => void;
   readonly send: () => void;

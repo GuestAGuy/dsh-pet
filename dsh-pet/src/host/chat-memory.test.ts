@@ -29,15 +29,18 @@ const IMAGE: PetImageRef = {
   height: 173,
 };
 
-/** 一份假 ctx：对话生成只读 agentDefaultModel 与 llm.stream，reply 为模型回的那句。 */
-function fakeCtx(reply: string): unknown {
+/** 一份假 ctx：对话生成只读 agentDefaultModel 与 llm.stream，reply 为模型回的那句。
+ *  `captured` 传了就把每次 stream 的 options 收进去（断言提示词注入了哪几段）。 */
+function fakeCtx(reply: string, captured?: Record<string, unknown>[]): unknown {
   return {
     agentDefaultModel: { currentSelection: () => ({ provider: 'test', model: 'test-model' }) },
     llm: {
-      stream: () =>
-        (async function* () {
+      stream: (options: unknown) => {
+        captured?.push(options as Record<string, unknown>);
+        return (async function* () {
           yield { type: 'text-delta', index: 0, text: reply };
-        })(),
+        })();
+      },
     },
   };
 }
@@ -64,12 +67,15 @@ function createMemory(
     writes?: string[];
     records?: Array<{ petId: string; leaf: string; data: Record<string, unknown> }>;
   },
+  captured?: Record<string, unknown>[],
 ) {
   return createChatMemory({
-    ctx: fakeCtx(reply),
+    ctx: fakeCtx(reply, captured),
     configPaths: ws.configPaths,
     log: { info: () => {}, warn: () => {}, error: () => {} },
     memeDirsFor: () => (memeDir === undefined ? [] : [memeDir]),
+    // 播放回执表只用到 create：编号带宠物与动作名，测试据此断言写进叶子的是哪一个动作
+    playback: { create: (petId: string, name: string) => ({ playbackId: 'pb-' + petId + '-' + name }) },
     state: {
       writePet: (petId: string, leaf: string, data: Record<string, unknown>) => {
         collect?.writes?.push(petId + '.' + leaf);
@@ -78,6 +84,13 @@ function createMemory(
     },
     userRoot: ws.userRoot,
   } as unknown as ChatMemoryInput);
+}
+
+/** 从 stream options 里取出本轮 user 正文（最后一条消息的第一个 text 块）。 */
+function userTextOf(options: Record<string, unknown> | undefined): string {
+  const messages = options?.messages as Array<{ content: Array<{ type: string; text?: string }> }> | undefined;
+  const last = messages?.[messages.length - 1];
+  return last?.content?.find((block) => block.type === 'text')?.text ?? '';
 }
 
 /** 读回刚落盘的记忆消息（只应有一只宠物一个分桶）。 */
@@ -254,6 +267,122 @@ describe('createChatMemory —— 对话回复的 voiceTo', () => {
       const r = await createMemory('在的', ws, undefined, { records }).chatWithPet('main', '在吗');
       assert.equal(r.ok, true);
       assert.equal(records[0]?.data.voiceTo, 'desktop', '默认宠物 display=both，桌面优先');
+    } finally {
+      rmSync(ws.dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('createChatMemory —— 对话动作联动', () => {
+  /** 收集一次对话写了哪些叶子与载荷。 */
+  type Records = Array<{ petId: string; leaf: string; data: Record<string, unknown> }>;
+
+  test('命中动作：先写 anim 叶子（带 playbackId）、再写气泡 anim:false，记忆记 action 且正文剥标记', async () => {
+    const ws = tempWorkspace();
+    const records: Records = [];
+    try {
+      const r = await createMemory('好呀～看我转一圈！\n[动作:优雅女仆舞]', ws, undefined, { records }).chatWithPet(
+        'main',
+        '跳个舞吧',
+      );
+      assert.equal(r.ok, true);
+      assert.deepEqual(
+        records.map((x) => x.leaf),
+        ['anim', 'say'],
+        '先写动作再写气泡：渲染端先收到动作，气泡不会把它顶掉',
+      );
+      const anim = records[0];
+      assert.equal(anim?.data.name, '优雅女仆舞');
+      assert.match(String(anim?.data.playbackId), /^pb-/);
+      const say = records[1];
+      assert.equal(say?.data.anim, false, '带动作时气泡不联动碎碎念动画');
+      assert.equal(say?.data.text, '好呀～看我转一圈！');
+      const assistant = readMessages(ws.userRoot)[1];
+      assert.equal(assistant?.content, '好呀～看我转一圈！', '记忆正文不得留标记');
+      assert.equal(assistant?.action, '优雅女仆舞', '记忆要能还原这一轮演了什么');
+    } finally {
+      rmSync(ws.dir, { recursive: true, force: true });
+    }
+  });
+
+  test('只写标记没有正文：演动作、不写 say（不弹空气泡）', async () => {
+    const ws = tempWorkspace();
+    const records: Records = [];
+    try {
+      const r = await createMemory('[动作:原地小憩沉眠]', ws, undefined, { records }).chatWithPet('main', '累了吧');
+      assert.equal(r.ok, true);
+      assert.deepEqual(
+        records.map((x) => x.leaf),
+        ['anim'],
+      );
+      assert.equal(readMessages(ws.userRoot)[1]?.content, '');
+    } finally {
+      rmSync(ws.dir, { recursive: true, force: true });
+    }
+  });
+
+  test('没选动作：不写 anim 叶子，气泡也不带 anim:false（与加功能前一致）', async () => {
+    const ws = tempWorkspace();
+    const records: Records = [];
+    try {
+      await createMemory('在的', ws, undefined, { records }).chatWithPet('main', '在吗');
+      assert.equal(
+        records.some((x) => x.leaf === 'anim'),
+        false,
+      );
+      const say = records.find((x) => x.leaf === 'say');
+      assert.equal('anim' in (say?.data ?? {}), false);
+      assert.equal('action' in (readMessages(ws.userRoot)[1] ?? {}), false);
+    } finally {
+      rmSync(ws.dir, { recursive: true, force: true });
+    }
+  });
+
+  test('chatAnimationEnabled=false：不注入也不解析，标记原样留在正文里', async () => {
+    const ws = tempWorkspace({ chatAnimationEnabled: false });
+    const records: Records = [];
+    try {
+      const r = await createMemory('好的\n[动作:优雅女仆舞]', ws, undefined, { records }).chatWithPet(
+        'main',
+        '跳个舞吧',
+      );
+      assert.equal(r.ok, true);
+      assert.equal(
+        records.some((x) => x.leaf === 'anim'),
+        false,
+        '关闭时不得写动作叶子',
+      );
+      assert.equal(r.ok === true ? r.text : '', '好的\n[动作:优雅女仆舞]', '关闭时不解析，标记原样保留');
+    } finally {
+      rmSync(ws.dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('createChatMemory —— 提示词注入（配图 / 动作各自独立）', () => {
+  test('两个开关都开：user 正文同时带配图清单与动作清单', async () => {
+    const ws = tempWorkspace({ chatImageEnabled: true, memes: { 可爱: '卖萌立绘' } });
+    mkdirSync(ws.memeDir, { recursive: true });
+    writeFileSync(join(ws.memeDir, '可爱.png'), '');
+    const captured: Record<string, unknown>[] = [];
+    try {
+      await createMemory('在的', ws, ws.memeDir, undefined, captured).chatWithPet('main', '在吗');
+      const text = userTextOf(captured[0]);
+      assert.ok(text.includes('[配图]'), '应注入配图指令');
+      assert.ok(text.includes('[动作]'), '应注入动作指令');
+      assert.ok(text.includes('- 可爱：卖萌立绘'), '配图清单要带上描述');
+      assert.ok(text.includes('- 优雅女仆舞'), '动作清单要带上名字');
+    } finally {
+      rmSync(ws.dir, { recursive: true, force: true });
+    }
+  });
+
+  test('两个开关都关：user 正文只有用户原话', async () => {
+    const ws = tempWorkspace({ chatImageEnabled: false, chatAnimationEnabled: false });
+    const captured: Record<string, unknown>[] = [];
+    try {
+      await createMemory('在的', ws, undefined, undefined, captured).chatWithPet('main', '在吗');
+      assert.equal(userTextOf(captured[0]), '在吗');
     } finally {
       rmSync(ws.dir, { recursive: true, force: true });
     }
