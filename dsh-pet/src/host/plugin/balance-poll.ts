@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { PACKAGE_ROOT } from '../paths.ts';
 import { queryBalance } from '../balance/index.ts';
 import { credentialRef } from '@deepseek-ai/dsh-credentials';
+import { clampPeriodSec } from './period.ts';
 import type { ChatMemory } from './chat-memory.ts';
 import type { HostSetup } from './setup.ts';
 import type { HostContext } from './context.ts';
@@ -22,29 +23,28 @@ export type BalancePollInput = {
 } & Pick<HostSetup, 'configPaths'> &
   Pick<ChatMemory, 'getActivePetId'> &
   Pick<HostSetup, 'log'> &
+  Pick<HostSetup, 'standaloneAiBalance'> &
   Pick<HostSetup, 'state'>;
 
 /**
  * 创建余额与周期。
  */
 export function createBalancePoll(deps: BalancePollInput) {
-  const { ctx, configPaths, getActivePetId, log, state } = deps;
+  const { ctx, configPaths, getActivePetId, log, state, standaloneAiBalance } = deps;
   /** 当前生效宠物列表：成品配置拍平（合并器已保证 id 唯一、字段填满），命令与桌面模式共用。 */
   const effectivePetList = (): Record<string, unknown>[] => flattenPetList(readAllConfig(configPaths));
 
   /** 余额刷新周期（秒）：成品 main 条目的 eventsRefreshSec.balance（合并器已填默认；非法兜底 1800） */
   const balancePeriodSec = (cfg: Record<string, Record<string, unknown>>): number => {
     const ers = cfg.main?.eventsRefreshSec as Record<string, unknown> | undefined;
-    const n = Number(ers?.balance);
-    return Number.isFinite(n) && n > 0 ? n : 1800;
+    return clampPeriodSec(ers?.balance, 1800);
   };
 
   /** 碎碎念周期（秒）：该宠物所属条目的 eventsRefreshSec.whisper（合并器已填默认；非法兜底 300）。
    *  收已解析的条目配置：唯一调用方是周期调度，它的 petId 就是从同一份 cfg 拍平出来的。 */
   const whisperPeriodSec = (conf: Record<string, unknown>): number => {
     const ers = conf.eventsRefreshSec as Record<string, unknown> | undefined;
-    const n = Number(ers?.whisper);
-    return Number.isFinite(n) && n > 0 ? n : 300;
+    return clampPeriodSec(ers?.whisper, 300);
   };
 
   /**
@@ -69,16 +69,27 @@ export function createBalancePoll(deps: BalancePollInput) {
    *
    * @param manual - 这次刷新是否由用户触发（/balance 命令、桌面「查看余额」菜单）；标记随数据写进
    *   叶子，前端据此决定余额不可用时是否必弹文字说明（周期刷新只在原因变化时弹一次）。
+   * @param petId - 这次刷新「给谁看」（右键菜单点的那只）。缺省 = 不写归属，
+   *   所有开了余额的宠物都照常显示；周期刷新与 /balance 命令都走这条。
    */
-  const refreshBalance = async (manual = false): Promise<void> => {
+  const refreshBalance = async (manual = false, petId?: string): Promise<void> => {
     // 开始 + 结果各一行：否则 logs.txt 里既看不出「有没有查」，也看不出「查了但余额没变」。
-    log.info(`[dsh-pet] 余额刷新开始（${manual ? '手动' : '周期'}）`);
-    const mark = <T>(v: T): T | (T & { manual: true }) => (manual ? { ...v, manual: true } : v);
+    log.info(`[dsh-pet] 余额刷新开始（${manual ? '手动' : '周期'}${petId === undefined ? '' : ' pet=' + petId}）`);
+    // manual 与 petId 都只在有时才补键：叶子形状是对外契约，多余的 undefined 键会被严格比对打回
+    const mark = <T>(v: T): T & { manual?: true; petId?: string } => ({
+      ...v,
+      ...(manual ? { manual: true as const } : {}),
+      ...(petId === undefined ? {} : { petId }),
+    });
     try {
-      const sel = ctx.agentDefaultModel.currentSelection();
+      // 独立模式自己选余额服务商、自己持密钥：它的 provider 不是聊天用的那个，
+      // 也不能经 DSH 的 credential store 解析，所以优先走 standaloneAi 交出来的凭证。
+      const standalone = standaloneAiBalance();
+      const provider = standalone?.provider || ctx.agentDefaultModel.currentSelection().provider;
       const result = await queryBalance(
-        sel.provider,
+        provider,
         async (ref) => {
+          if (standalone?.apiKey) return standalone.apiKey;
           const rc = await ctx.credentials.resolve(credentialRef(ref));
           return rc?.value;
         },

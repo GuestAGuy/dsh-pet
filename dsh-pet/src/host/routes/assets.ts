@@ -1,7 +1,7 @@
 /**
  * 静态素材：/font、/pic（含表情包链）、/sound、/thumb 的取文件与路径守卫。
  *
- * 不决定素材归属，只按给定目录链查找。
+ * 不决定素材归属，只按各 scope 的固定次序查找（用户层优先、包内兜底）。
  * 依赖（PetRouteDeps）显式传入，模块内不读全局、不建状态。
  * @module dsh-pet/src/host/routes/assets
  */
@@ -9,14 +9,15 @@ import { join } from 'node:path';
 import { PACKAGE_ROOT } from '../paths.ts';
 import { MIME, resolveAsset, resolveExisting } from '../http.ts';
 import { isValidPetId } from '../config.ts';
+import { petAvatarFile } from '../pet-avatar.ts';
 import { existsSync } from 'node:fs';
 import type { PetRouteDeps, RouteInput } from './types.ts';
 import type { RouteResult } from '../http.ts';
 
 /** 静态素材领域：未命中返回 undefined，命中返回应答。 */
 export async function handleAssetsRoutes(deps: PetRouteDeps, input: RouteInput): Promise<RouteResult | undefined> {
-  const { assetRootFor, memeDirsFor, petConfigDir, userRootFor } = deps;
-  const { rest } = input;
+  const { assetRootFor, memeDirsFor, petConfigDir, userRoot, userRootFor } = deps;
+  const { rest, url } = input;
 
   // 动画素材：/thumb/<素材根>/<file>，扩展名 webm（默认）/ mov（macOS 定制）。
   // 存在 `pet/<素材根>-animation/` 的宠物只查自己的目录，查不到即 404，绝不混用；
@@ -26,10 +27,21 @@ export async function handleAssetsRoutes(deps: PetRouteDeps, input: RouteInput):
   // font / pic 是扁平的 /<scope>/<file>，只有 thumb 是 /<scope>/<petId>/<file>：先拆 scope 再各自拆剩余段。
   const [scope, ...restParts] = rest.split('/');
 
-  // 插件 logo：/logo → 包内 assets/logo.png。只放行这一个文件——不把 assets 根开放成静态目录
+  // 插件 logo / 宠物头像：/logo → 包内 assets/logo.png。只放行这一个文件——不把 assets 根开放成静态目录
   // （同目录还有 config.jsonc）。对话面板拿它当宠物头像。
+  // 带 ?root=<素材根> 时先找该宠物的自定义头像（pet/<素材根>-avatar.<ext>），没有就回退包内 logo：
+  // 「没上传过」与「上传后又删掉」都由这一处兜底，前端不必区分。
+  // main 不查自定义文件：pet/ 只归 pet pack，内置条目永远用包内 logo。
+  // 参数叫 root 而不是 pet：这里要的是素材根（目录前缀），不是 pets[].id。
   if (scope === 'logo') {
     if (restParts.length > 0) return { kind: 'text', status: 400, body: 'dsh-pet: expected /dsh-pet-7340/logo' };
+    const assetRoot = (url.searchParams.get('root') ?? '').trim();
+    if (assetRoot !== '' && assetRoot !== 'main') {
+      // 素材根是标识符不是路径片段：含分隔符/保留字符即显式 400，早于任何路径拼接。
+      if (!isValidPetId(assetRoot)) return { kind: 'text', status: 400, body: 'dsh-pet: invalid asset root' };
+      const own = petAvatarFile(petConfigDir, assetRoot);
+      if (own !== undefined) return { kind: 'file', file: own.file, contentType: own.contentType };
+    }
     const logo = resolveExisting(join(PACKAGE_ROOT, 'assets'), 'logo.png');
     if (logo === undefined) return { kind: 'text', status: 404, body: 'dsh-pet: logo not found' };
     return { kind: 'file', file: logo, contentType: MIME['.png'] ?? 'image/png' };
@@ -43,7 +55,8 @@ export async function handleAssetsRoutes(deps: PetRouteDeps, input: RouteInput):
     return { kind: 'file', file: fontFile, contentType: MIME[ext] ?? 'application/octet-stream' };
   }
 
-  // 通知图标：/pic/<file> → 包内 assets/pic（方形 png，系统通知 icon 用）。
+  // 通知图标、拖拽光标、玩法图：/pic/<file> → 用户层 $DSH_HOME/dsh-pet/pic/ 优先，包内 assets/pic 兜底。
+  // 用户层是为了自定义图标能活过插件升级——升级重装会把包内 assets 还原成内置那套。
   // 表情包：/pic/memes/<素材根>/<名称>.png → 按素材根走 memeDirsFor 的目录链，与 /thumb 同一套
   // 归属语义；名称含中文，URL 段已在上方解码。旧的两段形式 /pic/memes/<名称>.png 保留，
   // 等价于素材根 main 的目录链。
@@ -67,8 +80,10 @@ export async function handleAssetsRoutes(deps: PetRouteDeps, input: RouteInput):
       const ext = picFile.slice(picFile.lastIndexOf('.')).toLowerCase();
       return { kind: 'file', file: picFile, contentType: MIME[ext] ?? 'application/octet-stream' };
     }
-    const picRoot = join(PACKAGE_ROOT, 'assets', 'pic');
-    const picFile = resolveExisting(picRoot, restParts.join('/'));
+    const picRel = restParts.join('/');
+    // 两层同一道守卫：resolveExisting 只放行根目录内的相对路径，用户层不额外开口子
+    const picFile =
+      resolveExisting(join(userRoot, 'pic'), picRel) ?? resolveExisting(join(PACKAGE_ROOT, 'assets', 'pic'), picRel);
     if (picFile === undefined) return { kind: 'text', status: 404, body: 'dsh-pet: pic not found' };
     const ext = picFile.slice(picFile.lastIndexOf('.')).toLowerCase();
     return { kind: 'file', file: picFile, contentType: MIME[ext] ?? 'application/octet-stream' };

@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os';
 import { Writable } from 'node:stream';
 
 import { apply } from './index.ts';
+import { activeChatMemoryProvider } from './chat-memory-provider.ts';
 
 /** 用户根之外的诱饵内容：任何响应体出现它都说明越根读盘成功 */
 const SECRET = 'TOP-SECRET-BYTES';
@@ -28,6 +29,8 @@ const OWN = 'PETPACK-OWN-ASSET';
 const MAIN = 'MAIN-POOL-ASSET';
 /** 用户表情包目录（共享链）里的图 */
 const SHARED_PIC = 'SHARED-MEME-BYTES';
+/** 用户 pic 目录里的图：覆盖包内同名通知图标的标记内容 */
+const USER_PIC = 'USER-PIC-OVERRIDE';
 /** pet pack 独占表情包目录里的图 */
 const OWN_PIC = 'PETPACK-OWN-MEME';
 /** 中文名 pet pack（仓库明确支持中文名，标识符校验不得用 ASCII 白名单） */
@@ -78,11 +81,16 @@ before(() => {
   writeFileSync(join(userRoot, 'memes', '共用图.png'), SHARED_PIC);
   mkdirSync(join(userRoot, 'pet', `${CN_PET}-memes`), { recursive: true });
   writeFileSync(join(userRoot, 'pet', `${CN_PET}-memes`, '自家图.png'), OWN_PIC);
+  // 用户 pic 目录：覆盖包内通知图标（升级重装不会碰用户目录）
+  mkdirSync(join(userRoot, 'pic'), { recursive: true });
+  writeFileSync(join(userRoot, 'pic', 'notify-done.png'), USER_PIC);
   // 用户根之外的诱饵：目录名以 -animation / -memes 结尾，正是旧漏洞能读到的东西
   mkdirSync(join(dir, 'outside-animation'), { recursive: true });
   writeFileSync(join(dir, 'outside-animation', 'leak.webm'), SECRET);
   mkdirSync(join(dir, 'outside-memes'), { recursive: true });
   writeFileSync(join(dir, 'outside-memes', 'leak.png'), SECRET);
+  mkdirSync(join(dir, 'outside-pic'), { recursive: true });
+  writeFileSync(join(dir, 'outside-pic', 'leak.png'), SECRET);
 
   savedHome = process.env.DSH_HOME;
   savedElectron = process.env.DSH_PET_ELECTRON_PATH;
@@ -206,7 +214,15 @@ describe('/state + /balance —— 轮询统一状态与余额动作端点', () 
       sections: Record<string, { counter: number; data: unknown }>;
       pets: Record<string, unknown>;
     };
-    assert.deepEqual(Object.keys(body.sections).sort(), ['balance', 'config', 'menu', 'notify', 'workStatus']);
+    assert.deepEqual(Object.keys(body.sections).sort(), [
+      'balance',
+      'config',
+      'env',
+      'focusSession',
+      'menu',
+      'notify',
+      'workStatus',
+    ]);
     assert.equal(body.sections.balance.counter, 0, '没人写过时 counter=0（前端首拉当基线）');
     assert.equal(body.sections.balance.data, null);
     assert.equal(body.sections.config.data, null, '配置变更信号也没人写过（counter=0 / data=null）');
@@ -553,9 +569,23 @@ describe('pic/memes 路由 —— 表情包素材归属（与 thumb 同一套语
     assert.equal((await call('/dsh-pet-7340/pic/memes/main/nope.png')).status, 404);
   });
 
-  test('通知图标（/pic/<名>.png）不受影响：仍只从包内 assets/pic 取', async () => {
-    // 源码形态下包内 assets 不可达 → 404（关键是不被 memes 分支吞掉）
+  test('通知图标（/pic/<名>.png）不被 memes 分支吞掉：两层都没有 → 404', async () => {
+    // 源码形态下包内 assets 不可达、用户 pic 目录里也没有 logo.png → 404
     assert.equal((await call('/dsh-pet-7340/pic/logo.png')).status, 404);
+  });
+});
+
+describe('pic 路由 —— 静态图的用户层覆盖（插件升级不冲掉自定义图标）', () => {
+  test('用户 pic 目录有同名文件：优先于包内，返回用户那份', async () => {
+    const r = await call('/dsh-pet-7340/pic/notify-done.png');
+    assert.equal(r.status, 200);
+    assert.equal(r.body, USER_PIC);
+  });
+
+  test('用户层同样不可穿越：反斜杠 ../ 不越出用户根', async () => {
+    const r = await call('/dsh-pet-7340/pic/..%5C..%5Coutside-pic%5Cleak.png');
+    assert.equal(r.status, 404);
+    assert.equal(r.body.includes(SECRET), false, '越根内容不得出现在响应体里');
   });
 });
 
@@ -768,7 +798,11 @@ describe('/work-status —— 外部写入工作状态', () => {
     const r = await call('/dsh-pet-7340/work-status', 'POST', JSON.stringify({ state: 'working', task: '编译中' }));
     assert.equal(r.status, 200);
     assert.deepEqual(JSON.parse(r.body), { state: 'working', task: '编译中' });
-    assert.deepEqual((await work()).sections.workStatus.data, { state: 'working', task: '编译中' });
+    assert.deepEqual((await work()).sections.workStatus.data, {
+      state: 'working',
+      task: '编译中',
+      sessionId: null,
+    });
   });
 
   test('省略 task 保留上一次；显式 null / 空串清空', async () => {
@@ -790,7 +824,7 @@ describe('/work-status —— 外部写入工作状态', () => {
     const del = await call('/dsh-pet-7340/work-status', 'DELETE');
     assert.equal(del.status, 204);
     assert.equal(del.body, '');
-    assert.deepEqual((await work()).sections.workStatus.data, { state: null, task: null });
+    assert.deepEqual((await work()).sections.workStatus.data, { state: null, task: null, sessionId: null });
 
     const again = await call('/dsh-pet-7340/work-status', 'DELETE');
     assert.equal(again.status, 204);
@@ -908,6 +942,38 @@ describe('CSRF 防线 —— 浏览器跨站请求在 handler 层被拒绝', () 
     });
     assert.equal(r.status, 403);
     assert.equal((JSON.parse(r.body) as { reason: string }).reason, 'untrusted-host');
+  });
+});
+
+describe('对外 Cordis 服务 —— 第三方注册记忆', () => {
+  interface MemoryApi {
+    register: (def: { id: string; recall?: () => Promise<{ userText?: string }> }) => () => void;
+    list: () => { builtin: string[]; external: string[] };
+  }
+  const api = (): MemoryApi => {
+    const value = provided.get('petApi7340') as { memory?: MemoryApi } | undefined;
+    assert.ok(value?.memory, 'apply() 必须挂出 petApi7340.memory');
+    return value.memory;
+  };
+
+  test('挂出的是 register + list（没有 unregister：注销走 register 的返回值）', () => {
+    const memory = api() as unknown as Record<string, unknown>;
+    assert.equal(typeof memory.register, 'function');
+    assert.equal(typeof memory.list, 'function');
+    assert.equal('unregister' in memory, false);
+  });
+
+  test('通过服务注册后 list 与聊天路径都看得到，disposer 后回落原生', () => {
+    const def = { id: 'route-test-memory', recall: async () => ({ userText: '改后的问题' }) };
+    const dispose = api().register(def);
+    try {
+      assert.ok(api().list().external.includes('route-test-memory'));
+      assert.equal(activeChatMemoryProvider(), def, '聊天路径读到的必须是服务注册的这一份');
+    } finally {
+      dispose();
+    }
+    assert.equal(api().list().external.includes('route-test-memory'), false);
+    assert.equal(activeChatMemoryProvider(), null);
   });
 });
 

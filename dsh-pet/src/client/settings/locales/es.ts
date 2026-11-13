@@ -9,6 +9,13 @@ export const es: Record<Key, string> = {
     'Gestiona varias mascotas: cada una tiene su propio tamaño y posición (se aplica al instante después de guardar).',
   // 卡片标题与卡片级说明；说明统一进问号气泡。
   petCardTitle: 'Mascota',
+  avatarLabel: 'Avatar',
+  avatarHint:
+    'La imagen pequeña que aparece junto a los mensajes de esta mascota en el panel de chat. Sin subir nada se usa el logotipo predeterminado del plugin; al subir una imagen se aplica al instante y reemplaza la anterior, sin pulsar "Guardar".',
+  avatarUpload: 'Subir avatar',
+  avatarChange: 'Cambiar',
+  avatarUploading: 'Subiendo…',
+  avatarUploaded: 'Avatar actualizado',
   petCardHint:
     'Ajustes por mascota: nombre / tamaño / visualización / esquina / márgenes / los cuatro interruptores de funciones. Pulsa "Guardar" abajo para aplicar al instante.',
   globalTitle: 'Interruptores globales',
@@ -22,6 +29,27 @@ export const es: Record<Key, string> = {
   'cmd.chat': 'Chat',
   'cmd.pet': 'Mascota',
   'cmd.balance': 'Saldo',
+  'shortcut.open': 'Abrir el chat de la mascota',
+  'shortcut.chat': 'Abrir la ventana de chat',
+  'shortcut.hear': 'Entrada de voz',
+  'shortcut.capture': 'Captura de pantalla al chat',
+  shortcutCardTitle: 'Atajos',
+  shortcutCardHint: 'Al expandir hay dos grupos: atajos de la mascota y atajos globales.',
+  shortcutRowChat: 'Abrir chat',
+  shortcutRowHold: 'Mantener para hablar',
+  shortcutRowHear: 'Entrada de voz',
+  shortcutRowCapture: 'Captura de pantalla',
+  shortcutRowPaste: 'Pegar imagen',
+  shortcutRowTodo: 'Tareas',
+  shortcutRowSleep: 'Dormir / despertar',
+  shortcutRowDisplay: 'Posición de visualización',
+  shortcutRowSidebar: 'Abrir el chat lateral',
+  shortcutGroupPet: 'Atajos de la mascota',
+  shortcutGroupPetHint:
+    'En la web basta con pasar el puntero sobre la mascota. En la ventana del escritorio hay que hacer clic en la mascota para que reciba el foco del teclado.',
+  shortcutGroupGlobal: 'Atajos globales',
+  shortcutGroupGlobalHint:
+    'Los distribuye DSH en la web y en la ventana del escritorio; se cambian en Ajustes → General → Atajos.',
   petsLabel: 'Mascotas',
   add: 'Agregar mascota',
   remove: 'Eliminar',
@@ -111,7 +139,10 @@ export const es: Record<Key, string> = {
     'Las mascotas principales se guardaron, pero {names} no se pudo escribir de vuelta: revisa que la configuración del pack sea válida y que el directorio tenga permisos de escritura.',
   notifyToggle: 'Notificaciones del sistema',
   notifyToggleHint:
-    'Avisos del sistema operativo (abajo a la derecha del escritorio) al completarse una conversación, si falla la generación, cuando se solicita permiso o cuando hay que elegir; solo mientras esta ventana no tiene el foco.',
+    'Avisos del sistema operativo (abajo a la derecha del escritorio) al completarse una conversación, si falla la generación, cuando se solicita permiso o cuando hay que elegir. Por defecto solo mientras esta ventana no tiene el foco.',
+  notifyWhenFocusedToggle: 'Avisar también con el foco',
+  notifyWhenFocusedToggleHint:
+    'Muestra avisos y lee el estado del trabajo también cuando esta página está visible y la ventana tiene el foco. Desactivado por defecto: actívalo si no quieres perderte finalizaciones y errores mientras miras la ventana.',
   clickSoundToggle: 'Sonido al hacer clic',
   clickSoundToggleHint:
     'Reproduce el sonido de clic integrado (assets/sound/click-duck.wav, volumen 0.5) al hacer clic en una mascota; los clics repetidos en menos de 100 ms solo suenan una vez, así que varias mascotas nunca se superponen. Desactívalo para silencio total. Se escribe en la configuración del usuario al Guardar.',
@@ -132,29 +163,38 @@ export const es: Record<Key, string> = {
     'Muestra un icono en la bandeja (área de notificaciones en Windows, barra de menús en macOS) cuando el modo escritorio está activo. Lista todas las mascotas de la configuración y alterna cada una entre escritorio y web/ninguno, incluidas las que ahora no están en el escritorio y no tienen ventana donde hacer clic derecho. Con esto desactivado, para devolver una mascota al escritorio hay que abrir el navegador (la página de configuración o el clic derecho sobre la mascota web). Windows ya oculta los iconos de terceros en «iconos ocultos». Solo afecta al modo escritorio.',
   voiceTitle: 'Voz',
   voiceHint:
-    'Tres interruptores y una voz: el maestro controla la locución automática y los dos secundarios controlan un tipo de mensaje proactivo cada uno. Todo desactivado por defecto; se escribe en la configuración del usuario al "Guardar" (nunca al instante).',
-  voiceEnabled: 'Locutar respuestas',
+    'Cuatro interruptores y una voz: cada tipo de locución tiene su propio interruptor y ninguno depende de otro. Todo desactivado por defecto; se escribe en la configuración del usuario al "Guardar" (nunca al instante).',
+  voiceEnabled: 'Locutar susurros manuales',
   voiceEnabledHint:
-    'Interruptor maestro de la locución automática. Si está desactivado, los susurros periódicos y los recordatorios de tareas quedan en silencio (los dos interruptores de abajo no tienen efecto). Los susurros manuales, las respuestas del chat y el botón de altavoz del panel de chat no dependen de él: los pediste tú, así que la superficie desde la que los pediste los locuta directamente. Solo afecta a si se produce sonido: los globos, la memoria del chat y las notificaciones del sistema no cambian; un fallo de síntesis se registra y nunca interrumpe la conversación.',
+    'Locuta los susurros lanzados desde el menú contextual o un comando de barra, y también las respuestas del chat. El botón de altavoz del panel de chat locuta una sola frase en cuanto lo pulsas. Solo afecta a si se produce sonido: los globos, la memoria del chat y las notificaciones emergentes del sistema no cambian; un fallo de síntesis se registra y nunca interrumpe la conversación.',
   voiceWhisperEnabled: 'Locutar susurros',
   voiceWhisperEnabledHint:
-    'Locuta el susurro generado periódicamente (el susurro manual con clic derecho no se ve afectado). Depende del interruptor maestro de arriba. Desactivado por defecto: los susurros son narración de fondo y no deberían sonar sin pedirlo.',
+    'Locuta el susurro generado periódicamente. Desactivado por defecto: los susurros son narración de fondo y no deberían sonar sin pedirlo.',
   voiceTodoEnabled: 'Locutar recordatorios de tareas',
   voiceTodoEnabledHint:
-    'Locuta el recordatorio de una tarea cuando vence (el globo sigue apareciendo; esto solo decide si se locuta). Depende del interruptor maestro de arriba. Desactivado por defecto.',
+    'Locuta el recordatorio de una tarea cuando vence (el globo sigue apareciendo; esto solo decide si se locuta). Desactivado por defecto.',
+  voiceNotifyEnabled: 'Locutar estado de trabajo',
+  voiceNotifyEnabledHint:
+    'Locuta una frase configurada de estado de trabajo cuando una tarea termina, falla o espera tu confirmación. Igual que las notificaciones del sistema, solo locuta cuando no estás en esta página (otra aplicación, sin foco, minimizada): no interrumpe mientras miras la pantalla. Solo se locuta la frase configurada, nunca el detalle de la tarea. Desactivado por defecto.',
   voiceNameLabel: 'Voz',
+  voiceVolumeLabel: 'Volumen',
+  voiceVolumeHint:
+    'Volumen de reproducción como decimal 0–1: 1 es el volumen máximo (100 %) y 0 silencia. Solo cambia la intensidad y no vuelve a sintetizar el audio, así que ajustarlo no tiene coste extra. Los cuatro tipos de locución comparten este mismo volumen.',
   physicsTitle: 'Física (sensación al arrastrar y lanzar)',
   physicsHint:
     'Valor predeterminado global, compartido por todas las mascotas (un pet pack puede sobrescribirlo en el archivo de su propio tipo); se escribe en la configuración del usuario al "Guardar" (nunca al instante). En el navegador se aplica al instante; en el escritorio se aplica cuando Guardar recarga las ventanas de mascotas.',
-  'physics.gravity': 'Gravedad (gravity)',
+  mobileTitle: 'Efectos móviles',
+  mobileHint:
+    'Solo tienen sentido en el navegador del móvil: la vibración necesita motor, los dos interruptores de movimiento necesitan sensores de inclinación/aceleración, y los sensores exigen HTTPS o localhost.',
+  'physics.gravity': 'Gravedad',
   'physics.gravityHint': 'px/s²: cuanto mayor, más rápido cae; 0 = sin gravedad (vuela en línea recta para siempre)',
-  'physics.restitution': 'Rebote (restitution)',
+  'physics.restitution': 'Rebote',
   'physics.restitutionHint':
     '0–1, velocidad que se conserva al rebotar en una pared o el suelo (1 = completamente elástico, 0 = se detiene en seco)',
-  'physics.groundFriction': 'Fricción con el suelo (groundFriction)',
+  'physics.groundFriction': 'Fricción de contacto',
   'physics.groundFrictionHint':
-    'por segundo, amortiguación horizontal mientras está en el suelo; 0 = hielo sin fricción',
-  'physics.throwPower': 'Fuerza de lanzamiento (throwPower)',
+    'por segundo, amortiguación a lo largo de cualquier superficie (pared, suelo, techo); 0 = hielo en todas',
+  'physics.throwPower': 'Fuerza de lanzamiento',
   'physics.throwPowerHint':
     '> 0, multiplicador general del seguimiento con resorte y de la velocidad de salida (1 = predeterminado; más alto = sigue más pegado y lanza más fuerte)',
   physicsCeilingBounce: 'Rebote en el techo',
@@ -165,6 +205,12 @@ export const es: Record<Key, string> = {
   physicsHaptic: 'Vibración al chocar',
   physicsHapticHint:
     'Una vibración por impacto (paredes, suelo, techo, otras mascotas). Funciona en Chrome/Edge; no en iOS ni en navegadores WebView como Via. El modo No molestar la bloquea.',
+  physicsTilt: 'Gravedad por inclinación',
+  physicsTiltHint:
+    'Inclina el móvil y la gravedad lo sigue (magnitud = el valor de arriba); con gravedad en 0 la inclinación no hace nada. Requiere HTTPS/localhost.',
+  physicsShake: 'Agitar para lanzar',
+  physicsShakeHint:
+    'Agita para lanzar la mascota en la dirección del gesto; la fuerza escala con throwPower. No depende de la gravedad, así que funciona con gravedad 0. Requiere HTTPS/localhost.',
   invalidPhysics:
     'Revisa los parámetros de física: gravedad / fricción con el suelo ≥ 0, rebote 0–1, fuerza de lanzamiento > 0.',
   fontTitle: 'Apariencia y fuente',
@@ -188,7 +234,7 @@ export const es: Record<Key, string> = {
   'font.simsun': 'SimSun',
   'font.comic': 'Comic Sans MS',
   'font.system': 'Predeterminada del sistema',
-  modelTitle: 'Modelos de IA y contexto del chat',
+  modelTitle: 'Chat y modelos',
   modelHint:
     'Qué modelo usa cada uno de susurros y chat, y cuánto historial lleva cada solicitud de chat. "Seguir la conversación actual" usa el modelo de tu conversación actual (predeterminado). Valor predeterminado global: se aplica a todas las mascotas y un pet pack puede sobrescribirlo en el archivo de su propio tipo. Las opciones vienen de la misma fuente que el selector de modelos de DSH y el host las sirve en vivo.',
   modelFollow: 'Seguir la conversación actual',
@@ -243,5 +289,12 @@ export const es: Record<Key, string> = {
     '2. Quita el plugin en sí (ejecútalo en la terminal; también lo elimina de la capa de bundles del perfil):',
   uninstallStep3:
     '3. Borra las ubicaciones de arriba según necesites: las cachés no hacen daño; borrar los «datos de usuario del plugin» pierde la configuración y la memoria del chat (haz una copia de main-config.jsonc si quieres conservarla).',
+  motionTitle: 'Frecuencia de acciones',
+  motionHint:
+    'Cuatro casillas: espera / giro / movimiento son editables; la acción aleatoria se calcula (100 − las otras tres). Valor global para todas las mascotas; un pet pack puede sobrescribirlo en su archivo de tipo.',
+  'motion.idle': 'En espera',
+  'motion.turn': 'Giro',
+  'motion.move': 'Movimiento',
+  'motion.action': 'Acción aleatoria',
   uninstallCmd: 'dsh plugin --profile {profile} remove dsh-pet',
 };

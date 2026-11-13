@@ -90,6 +90,9 @@ export function saveUserConfig(
   }
   const ne = o.notificationsEnabled;
   if (ne !== undefined && typeof ne !== 'boolean') return null;
+  // 前台聚焦时也提醒（全局布尔，与 notificationsEnabled 同语义）：传了必须是布尔，没传走透传保留
+  const nwf = o.notifyWhenFocused;
+  if (nwf !== undefined && typeof nwf !== 'boolean') return null;
   // 点击音效开关（全局布尔，与 notificationsEnabled 同语义）：传了必须是布尔，没传走透传保留
   const cse = o.clickSoundEnabled;
   if (cse !== undefined && typeof cse !== 'boolean') return null;
@@ -108,12 +111,17 @@ export function saveUserConfig(
   if (ve !== undefined && typeof ve !== 'boolean') return null;
   const vn = o.voiceName;
   if (vn !== undefined && !topFieldValid('voiceName', vn)) return null;
+  // 播放音量（全局系数，0–1）：与上面同一套语义——传了必须合法，没传走透传保留。
+  const vv = o.voiceVolume;
+  if (vv !== undefined && !topFieldValid('voiceVolume', vv)) return null;
   // 语音播报的两个细分开关（周期碎碎念 / 待办提醒）：与上面两个布尔同语义——传了必须是布尔，
   // 没传走透传保留；校验直接复用读取侧的 topFieldValid，读写同一份规则。
   const vwe = o.voiceWhisperEnabled;
   if (vwe !== undefined && !topFieldValid('voiceWhisperEnabled', vwe)) return null;
   const vte = o.voiceTodoEnabled;
   if (vte !== undefined && !topFieldValid('voiceTodoEnabled', vte)) return null;
+  const vne = o.voiceNotifyEnabled;
+  if (vne !== undefined && !topFieldValid('voiceNotifyEnabled', vne)) return null;
   // 系统托盘开关（全局，仅桌面模式）：与上面几个全局布尔同语义——传了必须是布尔，没传走透传保留。
   const te = o.trayEnabled;
   if (te !== undefined && typeof te !== 'boolean') return null;
@@ -122,6 +130,11 @@ export function saveUserConfig(
   // 传了就按白名单写入；没传则走下面的透传保留（用户手改的值原样不动）。
   const ph = o.physics;
   if (ph !== undefined && !physicsValid(ph)) return null;
+  // animationWeights（动作频率；设置页「动作频率」卡写的就是它）：与 physics 同一套语义——
+  // 传了就整段校验后进白名单，没传则走下面的透传保留。校验复用读取侧的 topFieldValid
+  // （三个权重都是非负有限数），落盘只留 idle / turn / move 三个数字。
+  const aw = o.animationWeights;
+  if (aw !== undefined && !topFieldValid('animationWeights', aw)) return null;
   // font（字体种类 / 字号 / 是否随宠物缩放；设置页「外观与字体」区写的就是它）：与 physics
   // 同一套语义——传了就整段校验后进白名单，没传则走下面的透传保留。
   // 校验直接复用读取侧的 fontValid（family 白名单 / size 4~200 / followPet 布尔），读写同一份规则。
@@ -147,10 +160,16 @@ export function saveUserConfig(
     provider: String(v.provider).trim(),
     model: String(v.model).trim(),
   });
+  const cleanWeights = (v: Record<string, unknown>): { idle: number; turn: number; move: number } => ({
+    idle: Number(v.idle),
+    turn: Number(v.turn),
+    move: Number(v.move),
+  });
   // 白名单可编辑字段：pets 来自请求体，其余（四个全局开关 / physics / 两个模型 /
   // 对话历史条数）同样只在请求体真的传了时才写（未传则走下面的透传保留，不凭空造值）
   const outConfig: { pets: unknown[]; [key: string]: unknown } = { pets: out };
   if (ne !== undefined) outConfig.notificationsEnabled = ne;
+  if (nwf !== undefined) outConfig.notifyWhenFocused = nwf;
   if (cse !== undefined) outConfig.clickSoundEnabled = cse;
   if (wie !== undefined) outConfig.whisperImageEnabled = wie;
   if (cie !== undefined) outConfig.chatImageEnabled = cie;
@@ -158,10 +177,13 @@ export function saveUserConfig(
   if (cts !== undefined) outConfig.confineToScreen = cts;
   if (ve !== undefined) outConfig.voiceEnabled = ve;
   if (vn !== undefined) outConfig.voiceName = vn;
+  if (vv !== undefined) outConfig.voiceVolume = vv;
   if (vwe !== undefined) outConfig.voiceWhisperEnabled = vwe;
   if (vte !== undefined) outConfig.voiceTodoEnabled = vte;
+  if (vne !== undefined) outConfig.voiceNotifyEnabled = vne;
   if (te !== undefined) outConfig.trayEnabled = te;
   if (ph !== undefined) outConfig.physics = ph;
+  if (aw !== undefined) outConfig.animationWeights = cleanWeights(aw as Record<string, unknown>);
   if (fo !== undefined) outConfig.font = fo;
   if (wm !== undefined) outConfig.whisperModel = cleanModel(wm as Record<string, unknown>);
   if (cm !== undefined) outConfig.chatModel = cleanModel(cm as Record<string, unknown>);
@@ -174,6 +196,7 @@ export function saveUserConfig(
   // 否则整包调用的调用方漏传一个字段，就会把用户既有设置悄悄抹成默认。
   const bodyOwned = new Set(['pets']);
   if (ne !== undefined) bodyOwned.add('notificationsEnabled');
+  if (nwf !== undefined) bodyOwned.add('notifyWhenFocused');
   if (cse !== undefined) bodyOwned.add('clickSoundEnabled');
   if (wie !== undefined) bodyOwned.add('whisperImageEnabled');
   if (cie !== undefined) bodyOwned.add('chatImageEnabled');
@@ -181,10 +204,13 @@ export function saveUserConfig(
   if (cts !== undefined) bodyOwned.add('confineToScreen');
   if (ve !== undefined) bodyOwned.add('voiceEnabled');
   if (vn !== undefined) bodyOwned.add('voiceName');
+  if (vv !== undefined) bodyOwned.add('voiceVolume');
   if (vwe !== undefined) bodyOwned.add('voiceWhisperEnabled');
   if (vte !== undefined) bodyOwned.add('voiceTodoEnabled');
+  if (vne !== undefined) bodyOwned.add('voiceNotifyEnabled');
   if (te !== undefined) bodyOwned.add('trayEnabled');
   if (ph !== undefined) bodyOwned.add('physics');
+  if (aw !== undefined) bodyOwned.add('animationWeights');
   if (fo !== undefined) bodyOwned.add('font');
   if (wm !== undefined) bodyOwned.add('whisperModel');
   if (cm !== undefined) bodyOwned.add('chatModel');

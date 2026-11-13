@@ -8,6 +8,13 @@ export const en: Record<Key, string> = {
   intro: 'Manage multiple pets: each pet has its own size and position (applies instantly after saving).',
   // 卡片标题与卡片级说明；说明统一进问号气泡。
   petCardTitle: 'Pet',
+  avatarLabel: 'Avatar',
+  avatarHint:
+    'The small image shown next to this pet’s messages in the chat panel. Without an upload it falls back to the plugin logo; an upload takes effect immediately and replaces the previous one — no need to click Save.',
+  avatarUpload: 'Upload avatar',
+  avatarChange: 'Change',
+  avatarUploading: 'Uploading…',
+  avatarUploaded: 'Avatar updated',
   petCardHint:
     'Per-pet settings: name / size / display / corner / offsets / the four feature switches. Click "Save" at the bottom to apply instantly.',
   globalTitle: 'Global switches',
@@ -20,6 +27,27 @@ export const en: Record<Key, string> = {
   'cmd.chat': 'Chat',
   'cmd.pet': 'Pet',
   'cmd.balance': 'Balance',
+  'shortcut.open': 'Open pet chat',
+  'shortcut.chat': 'Open chat bubble',
+  'shortcut.hear': 'Voice input',
+  'shortcut.capture': 'Screenshot to chat',
+  shortcutCardTitle: 'Shortcuts',
+  shortcutCardHint: 'Two groups once expanded: pet shortcuts and global shortcuts.',
+  shortcutRowChat: 'Open chat',
+  shortcutRowHold: 'Hold to talk',
+  shortcutRowHear: 'Voice input',
+  shortcutRowCapture: 'Screenshot',
+  shortcutRowPaste: 'Paste image',
+  shortcutRowTodo: 'Todo list',
+  shortcutRowSleep: 'Sleep / wake',
+  shortcutRowDisplay: 'Display position',
+  shortcutRowSidebar: 'Open sidebar chat',
+  shortcutGroupPet: 'Pet shortcuts',
+  shortcutGroupPetHint:
+    'On the web, hovering the pet is enough. In the desktop pet window, click the pet first so it takes keyboard focus.',
+  shortcutGroupGlobal: 'Global shortcuts',
+  shortcutGroupGlobalHint:
+    'Dispatched by DSH in the web app and the desktop window; rebind them in Settings → General → Shortcuts.',
   petsLabel: 'Pets',
   add: 'Add pet',
   remove: 'Remove',
@@ -107,7 +135,10 @@ export const en: Record<Key, string> = {
     'Main pets saved, but {names} could not be written back: check that the pack config is valid and the directory is writable.',
   notifyToggle: 'System notifications',
   notifyToggleHint:
-    'OS-level toasts (bottom-right of the desktop) for conversation completion, failures, permission requests, and questions — only while this window is unfocused.',
+    'OS-level toasts (bottom-right of the desktop) for conversation completion, failures, permission requests, and questions. By default they only appear while this window is unfocused.',
+  notifyWhenFocusedToggle: 'Notify while focused',
+  notifyWhenFocusedToggleHint:
+    'Also toast and speak work-status lines while this page is visible and focused. Off by default — turn it on if you do not want to miss completions and failures while looking at the window.',
   clickSoundToggle: 'Click sound',
   clickSoundToggleHint:
     'Plays the built-in click sound (assets/sound/click-duck.wav, volume 0.5) when a pet is clicked; repeated clicks within 100ms play only once, so multiple pets never stack up. Turn it off for silence. Written to the user config together with Save.',
@@ -128,27 +159,37 @@ export const en: Record<Key, string> = {
     'Shows a tray icon (notification area on Windows, menu bar on macOS) once desktop mode is running. It lists every pet in the config and toggles each one between desktop and web/none — including pets that are currently off the desktop and therefore have no window to right-click. With it off, bringing a pet back to the desktop requires opening the browser (the settings page, or right-clicking a web pet there). Windows already folds third-party icons into the "hidden icons" overflow. Desktop mode only.',
   voiceTitle: 'Voice',
   voiceHint:
-    'Three switches plus a voice: the master switch gates automatic speech, the two sub-switches gate one kind of proactive message each. All off by default; written to the user config on "Save" (never written immediately).',
-  voiceEnabled: 'Speak replies',
+    'Four switches plus a voice: each kind of speech has its own switch and none of them depends on another. All off by default; written to the user config on "Save" (never written immediately).',
+  voiceEnabled: 'Speak manual whispers',
   voiceEnabledHint:
-    'Master switch for automatic speech. When off, periodic whispers and todo reminders stay silent (the two sub-switches below have no effect). Manual whispers, chat replies and the speaker button in the chat panel are not gated — you asked for those, so the surface you asked from speaks them directly. It only affects whether sound is produced — bubbles, chat memory and system notifications are untouched; a failed synthesis is logged and never interrupts the conversation.',
+    'Speaks whispers triggered from the context menu or a slash command, plus chat replies. The speaker button in the chat panel speaks a single line whenever you press it. It only affects whether sound is produced — bubbles, chat memory and system notification pop-ups are untouched; a failed synthesis is logged and never interrupts the conversation.',
   voiceWhisperEnabled: 'Speak whispers',
   voiceWhisperEnabledHint:
-    'Speaks the periodically generated whisper (right-clicking for a manual whisper is unaffected). Gated by the master switch above. Off by default — whispers are background narration and should not make noise unasked.',
+    'Speaks the periodically generated whisper. Off by default — whispers are background narration and should not make noise unasked.',
   voiceTodoEnabled: 'Speak todo reminders',
   voiceTodoEnabledHint:
-    'Speaks a todo reminder when it comes due (the bubble still appears; this only decides whether it is spoken). Gated by the master switch above. Off by default.',
+    'Speaks a todo reminder when it comes due (the bubble still appears; this only decides whether it is spoken). Off by default.',
+  voiceNotifyEnabled: 'Speak work status',
+  voiceNotifyEnabledHint:
+    'Speaks a configured work-status line when a task completes, fails, or waits for your confirmation. Like system notifications, it only speaks while you are away from this page (switched away, unfocused, minimized) — no interruption while you are looking at the screen. Only the configured line is spoken, never the task detail. Off by default.',
   voiceNameLabel: 'Voice',
+  voiceVolumeLabel: 'Volume',
+  voiceVolumeHint:
+    'Playback volume as a 0–1 decimal: 1 is full volume (100%), 0 is muted. Changes loudness only and never re-synthesizes audio, so adjusting it costs nothing extra. All four kinds of speech share this one volume.',
   physicsTitle: 'Physics (drag & throw feel)',
   physicsHint:
     'Global default, shared by every pet (a pet pack may override it in its own kind file); written to the user config on "Save" (never written immediately). Applies instantly in the browser; on the desktop it applies once Save reloads the pet windows.',
+  mobileTitle: 'Mobile effects',
+  mobileHint:
+    'Only meaningful in a phone browser: haptics needs a vibration motor, the two motion switches need tilt / accelerometer sensors, and sensors require HTTPS or localhost.',
   'physics.gravity': 'Gravity',
   'physics.gravityHint': 'px/s² — the higher, the faster it falls; 0 = weightless (flies straight forever)',
   'physics.restitution': 'Bounciness',
   'physics.restitutionHint':
     '0–1, speed kept when bouncing off a wall or the floor (1 = perfectly elastic, 0 = stops dead)',
-  'physics.groundFriction': 'Ground friction',
-  'physics.groundFrictionHint': 'per second, horizontal damping while on the ground; 0 = frictionless ice',
+  'physics.groundFriction': 'Contact friction',
+  'physics.groundFrictionHint':
+    'per second, damping along any surface hit (wall, floor, ceiling); 0 = frictionless ice everywhere',
   'physics.throwPower': 'Throw power',
   'physics.throwPowerHint':
     '> 0, overall multiplier for spring tracking and release speed (1 = default; higher = tighter tracking, harder throws)',
@@ -160,6 +201,12 @@ export const en: Record<Key, string> = {
   physicsHaptic: 'Collision haptics',
   physicsHapticHint:
     'One buzz per hit (walls, floor, ceiling, other pets). Works in Chrome/Edge; not on iOS or WebView shells like Via. Do Not Disturb blocks it.',
+  physicsTilt: 'Tilt gravity',
+  physicsTiltHint:
+    'Tilt the phone and gravity follows it (magnitude = the gravity value above); with gravity at 0 tilt has no effect. Requires HTTPS/localhost.',
+  physicsShake: 'Shake to throw',
+  physicsShakeHint:
+    'Shake to fling the pet along the shake direction; strength scales with throwPower. Independent of gravity, so it still works at gravity 0. Requires HTTPS/localhost.',
   invalidPhysics: 'Check the physics values: gravity / ground friction ≥ 0, bounciness 0–1, throw power > 0.',
   fontTitle: 'Appearance & font',
   fontHint:
@@ -182,7 +229,7 @@ export const en: Record<Key, string> = {
   'font.simsun': 'SimSun',
   'font.comic': 'Comic Sans MS',
   'font.system': 'System default',
-  modelTitle: 'AI models & chat context',
+  modelTitle: 'Chat & models',
   modelHint:
     'Which model each of whisper and chat uses, and how much history every chat request carries. "Follow current conversation" uses the model your current conversation is on (default). Global default: applies to every pet, and a pet pack may override it in its own kind file. The options come from the same source as the DSH model picker, served live by the host.',
   modelFollow: 'Follow current conversation',
@@ -235,5 +282,12 @@ export const en: Record<Key, string> = {
   uninstallStep2: '2. Remove the plugin itself (run in a terminal; this also drops it from the profile bundle layer):',
   uninstallStep3:
     '3. Delete the locations above as needed: cache folders are harmless; deleting "plugin user data" loses your config and chat memory (back up main-config.jsonc first if you want to keep it).',
+  motionTitle: 'Action frequency',
+  motionHint:
+    'Four boxes: idle / turn / move are editable, and the random action is computed (100 − the other three). Global default, shared by every pet; a pet pack may override it in its own kind file.',
+  'motion.idle': 'Idle',
+  'motion.turn': 'Turn',
+  'motion.move': 'Move',
+  'motion.action': 'Random action',
   uninstallCmd: 'dsh plugin --profile {profile} remove dsh-pet',
 };

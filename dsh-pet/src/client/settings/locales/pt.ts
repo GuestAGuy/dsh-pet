@@ -8,6 +8,13 @@ export const pt: Record<Key, string> = {
   intro: 'Gerencie vários pets: cada um tem tamanho e posição próprios (aplicado na hora após salvar).',
   // 卡片标题与卡片级说明；说明统一进问号气泡。
   petCardTitle: 'Pet',
+  avatarLabel: 'Avatar',
+  avatarHint:
+    'A imagem pequena exibida ao lado das mensagens deste pet no painel de conversa. Sem envio, usa-se o logotipo padrão do plugin; o envio vale na hora e substitui o anterior, sem clicar em "Salvar".',
+  avatarUpload: 'Enviar avatar',
+  avatarChange: 'Trocar',
+  avatarUploading: 'Enviando…',
+  avatarUploaded: 'Avatar atualizado',
   petCardHint:
     'Ajustes por pet: nome / tamanho / exibição / posição / deslocamentos / os quatro interruptores. Clique em "Salvar" no fim para aplicar na hora.',
   globalTitle: 'Interruptores globais',
@@ -20,6 +27,27 @@ export const pt: Record<Key, string> = {
   'cmd.chat': 'Conversa',
   'cmd.pet': 'Pet',
   'cmd.balance': 'Saldo',
+  'shortcut.open': 'Abrir o chat do pet',
+  'shortcut.chat': 'Abrir a janela de chat',
+  'shortcut.hear': 'Entrada de voz',
+  'shortcut.capture': 'Captura de tela para o chat',
+  shortcutCardTitle: 'Atalhos',
+  shortcutCardHint: 'Ao expandir há dois grupos: atalhos do pet e atalhos globais.',
+  shortcutRowChat: 'Abrir chat',
+  shortcutRowHold: 'Segurar para falar',
+  shortcutRowHear: 'Entrada de voz',
+  shortcutRowCapture: 'Captura de tela',
+  shortcutRowPaste: 'Colar imagem',
+  shortcutRowTodo: 'Tarefas',
+  shortcutRowSleep: 'Dormir / acordar',
+  shortcutRowDisplay: 'Posição de exibição',
+  shortcutRowSidebar: 'Abrir chat lateral',
+  shortcutGroupPet: 'Atalhos do pet',
+  shortcutGroupPetHint:
+    'Na web basta passar o ponteiro sobre o pet. Na janela do desktop, clique no pet primeiro para ele receber o foco do teclado.',
+  shortcutGroupGlobal: 'Atalhos globais',
+  shortcutGroupGlobalHint:
+    'São distribuídos pelo DSH na web e na janela do desktop; mudam em Configurações → Geral → Atalhos.',
   petsLabel: 'Pets',
   add: 'Adicionar pet',
   remove: 'Remover',
@@ -108,7 +136,10 @@ export const pt: Record<Key, string> = {
     'Os pets principais foram salvos, mas {names} não pôde ser gravado: verifique se o config do pacote é válido e se a pasta permite escrita.',
   notifyToggle: 'Notificações do sistema',
   notifyToggleHint:
-    'Avisos do sistema (canto inferior direito do desktop) para fim de conversa, falhas, pedidos de permissão e perguntas — só enquanto esta janela está sem foco.',
+    'Avisos do sistema (canto inferior direito do desktop) para fim de conversa, falhas, pedidos de permissão e perguntas. Por padrão, só enquanto esta janela está sem foco.',
+  notifyWhenFocusedToggle: 'Avisar também em foco',
+  notifyWhenFocusedToggleHint:
+    'Mostra avisos e lê o status do trabalho também quando esta página está visível e a janela está em foco. Desligado por padrão — ligue se não quiser perder conclusões e erros enquanto olha a janela.',
   clickSoundToggle: 'Som de clique',
   clickSoundToggleHint:
     'Toca o som de clique embutido (assets/sound/click-duck.wav, volume 0.5) quando o pet é clicado; cliques repetidos em até 100ms tocam uma vez só, então vários pets não empilham som. Desligue para silêncio total. Gravado na configuração do usuário junto com o "Salvar".',
@@ -129,28 +160,38 @@ export const pt: Record<Key, string> = {
     'Mostra um ícone na área de notificação (barra de menus no macOS) quando o modo desktop inicia. Ele lista todos os pets da configuração e alterna a exibição de cada um — inclusive os que estão fora do desktop agora e não têm janela para clicar com o botão direito. Sem ele, para trazer um pet de volta ao desktop é preciso abrir o navegador (a página de configuração, ou clicar com o botão direito no pet na web). O Windows já esconde ícones de terceiros na gaveta "ícones ocultos". Só afeta o modo desktop.',
   voiceTitle: 'Voz',
   voiceHint:
-    'Três interruptores e uma voz: o mestre controla a fala automática; os dois secundários controlam um tipo de mensagem proativa cada. Tudo desligado por padrão; gravado na configuração do usuário ao "Salvar" (nunca na hora).',
-  voiceEnabled: 'Falar respostas',
+    'Quatro interruptores e uma voz: cada tipo de fala tem o próprio interruptor e nenhum depende de outro. Tudo desligado por padrão; gravado na configuração do usuário ao "Salvar" (nunca na hora).',
+  voiceEnabled: 'Falar sussurros manuais',
   voiceEnabledHint:
-    'Interruptor mestre da fala automática. Desligado, sussurros periódicos e lembretes de tarefas ficam mudos (os dois secundários abaixo não têm efeito). Sussurro manual, respostas da conversa e o botão de alto-falante do painel de conversa não são afetados — você pediu, então a origem fala direto. Só decide se sai som: balões, memória da conversa e notificações do sistema não mudam; falha na síntese só gera log e nunca interrompe a conversa.',
+    'Fala os sussurros disparados pelo menu de contexto ou por um comando de barra, e também as respostas da conversa. O botão de alto-falante do painel de conversa fala uma única frase assim que você o aperta. Só decide se sai som: balões, memória da conversa e pop-ups de notificação do sistema não mudam; falha na síntese só gera log e nunca interrompe a conversa.',
   voiceWhisperEnabled: 'Falar sussurros',
   voiceWhisperEnabledHint:
-    'Fala o sussurro gerado periodicamente (o sussurro manual pelo botão direito não é afetado). Dependente do interruptor mestre acima. Desligado por padrão — sussurros são narração de fundo e não devem fazer barulho sem pedir.',
+    'Fala o sussurro gerado periodicamente. Desligado por padrão — sussurros são narração de fundo e não devem fazer barulho sem pedir.',
   voiceTodoEnabled: 'Falar lembretes de tarefas',
   voiceTodoEnabledHint:
-    'Fala o lembrete quando uma tarefa vence (o balão continua aparecendo; isto só decide se fala). Dependente do interruptor mestre acima. Desligado por padrão.',
+    'Fala o lembrete quando uma tarefa vence (o balão continua aparecendo; isto só decide se fala). Desligado por padrão.',
+  voiceNotifyEnabled: 'Falar estado de trabalho',
+  voiceNotifyEnabledHint:
+    'Fala uma frase configurada de estado de trabalho quando uma tarefa termina, falha ou aguarda sua confirmação. Como as notificações do sistema, só fala enquanto você não está nesta página (outro aplicativo, sem foco, minimizado) — sem interromper enquanto você olha para a tela. Só a frase configurada é falada, nunca o detalhe da tarefa. Desligado por padrão.',
   voiceNameLabel: 'Voz',
+  voiceVolumeLabel: 'Volume',
+  voiceVolumeHint:
+    'Volume de reprodução em decimal 0–1: 1 é o volume máximo (100%) e 0 silencia. Altera apenas a intensidade e não sintetiza o áudio de novo, então ajustá-lo não custa nada extra. Os quatro tipos de fala compartilham este mesmo volume.',
   physicsTitle: 'Física (sensação de arrastar e arremessar)',
   physicsHint:
     'Padrão global, compartilhado por todos os pets (um pet pack pode sobrescrever no arquivo do próprio tipo); gravado na configuração do usuário ao "Salvar" (nunca na hora). No navegador vale na hora; no desktop vale quando o "Salvar" recarrega as janelas do pet.',
-  'physics.gravity': 'Gravidade (gravity)',
+  mobileTitle: 'Efeitos no celular',
+  mobileHint:
+    'Só fazem sentido no navegador do celular: a vibração precisa de motor, os dois interruptores de movimento precisam de sensores de inclinação/aceleração, e os sensores exigem HTTPS ou localhost.',
+  'physics.gravity': 'Gravidade',
   'physics.gravityHint': 'px/s² — quanto maior, mais rápido cai; 0 = sem gravidade (voa em linha reta para sempre)',
-  'physics.restitution': 'Restituição (restitution)',
+  'physics.restitution': 'Restituição',
   'physics.restitutionHint':
     '0–1, velocidade mantida ao quicar na parede ou no chão (1 = totalmente elástico, 0 = para na hora)',
-  'physics.groundFriction': 'Atrito com o chão (groundFriction)',
-  'physics.groundFrictionHint': 'por segundo, perda de velocidade horizontal após encostar no chão; 0 = piso de gelo',
-  'physics.throwPower': 'Força de arremesso (throwPower)',
+  'physics.groundFriction': 'Atrito de contato',
+  'physics.groundFrictionHint':
+    'por segundo, perda de velocidade ao longo de qualquer superfície (parede, chão, teto); 0 = gelo em todas',
+  'physics.throwPower': 'Força de arremesso',
   'physics.throwPowerHint':
     '> 0, multiplicador geral da mola que segue o cursor e da velocidade de saída (1 = padrão; maior = mais colado ao cursor e arremessos mais fortes)',
   physicsCeilingBounce: 'Quicar no teto',
@@ -161,6 +202,12 @@ export const pt: Record<Key, string> = {
   physicsHaptic: 'Vibração ao colidir',
   physicsHapticHint:
     'Uma vibração por impacto (paredes, chão, teto, outros pets). Funciona no Chrome/Edge; não no iOS nem em navegadores WebView como o Via. O modo Não perturbe bloqueia o vibrador.',
+  physicsTilt: 'Gravidade por inclinação',
+  physicsTiltHint:
+    'Incline o celular e a gravidade acompanha (magnitude = o valor acima); com gravidade em 0 a inclinação não faz nada. Requer HTTPS/localhost.',
+  physicsShake: 'Sacudir para arremessar',
+  physicsShakeHint:
+    'Sacuda para arremessar o pet na direção do gesto; a força acompanha o throwPower. Independe da gravidade, então funciona com gravidade 0. Requer HTTPS/localhost.',
   invalidPhysics:
     'Revise os valores de física: gravidade / atrito com o chão ≥ 0, restituição 0–1, força de arremesso > 0.',
   fontTitle: 'Aparência e fonte',
@@ -184,7 +231,7 @@ export const pt: Record<Key, string> = {
   'font.simsun': 'SimSun',
   'font.comic': 'Comic Sans MS',
   'font.system': 'Padrão do sistema',
-  modelTitle: 'Modelos de IA e contexto da conversa',
+  modelTitle: 'Conversa e modelos',
   modelHint:
     'Qual modelo o sussurro e a conversa usam, e quanta história cada pedido de conversa carrega. "Seguir a conversa atual" usa o modelo da conversa em que você está (padrão). Padrão global: vale para todos os pets, e um pet pack pode sobrescrever no arquivo do próprio tipo. As opções vêm da mesma fonte do seletor de modelos do DSH, servidas pelo host em tempo real.',
   modelFollow: 'Seguir a conversa atual',
@@ -238,5 +285,12 @@ export const pt: Record<Key, string> = {
   uninstallStep2: '2. Remova o plugin em si (no terminal; isto também o tira da camada de bundle do profile):',
   uninstallStep3:
     '3. Apague os locais acima conforme a necessidade: caches não fazem falta; apagar "dados do usuário do plugin" perde a configuração e a memória da conversa (faça backup do main-config.jsonc antes, se quiser manter).',
+  motionTitle: 'Frequência de ações',
+  motionHint:
+    'Quatro campos: espera / giro / movimento são editáveis; a ação aleatória é calculada (100 − as outras três). Padrão global para todos os pets; um pet pack pode sobrescrevê-lo no arquivo do tipo.',
+  'motion.idle': 'Em espera',
+  'motion.turn': 'Giro',
+  'motion.move': 'Movimento',
+  'motion.action': 'Ação aleatória',
   uninstallCmd: 'dsh plugin --profile {profile} remove dsh-pet',
 };

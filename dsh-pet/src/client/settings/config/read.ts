@@ -6,7 +6,8 @@
  */
 import { DEFAULT_FONT } from '../../../shared/fonts.ts';
 import { DEFAULT_PHYSICS } from '../../../shared/physics.ts';
-import type { FontConfig, ModelSelection, Pet, PhysicsParams } from '../../../shared/types.ts';
+import type { FontConfig, ModelSelection, Pet, PhysicsParams, Weights } from '../../../shared/types.ts';
+import { parseWeights } from '../../../shared/weights.ts';
 
 /** 宿主返回的成品聚合：`main` 是大配置条目，其余键是文件定义的其他宠物条目。 */
 export type MergedConfig = Record<string, Record<string, unknown>>;
@@ -18,6 +19,8 @@ export interface MainConfigPatch {
   /** 条目级人设正文，作为实例人设「留空时跟随什么」的预览。 */
   entryPrompt?: string;
   notificationsEnabled?: boolean;
+  /** 前台聚焦时也提醒；缺省表示这次响应里没有可信值。 */
+  notifyWhenFocused?: boolean;
   clickSoundEnabled?: boolean;
   whisperImageEnabled?: boolean;
   chatImageEnabled?: boolean;
@@ -25,18 +28,24 @@ export interface MainConfigPatch {
   chatAnimationEnabled?: boolean;
   confineToScreen?: boolean;
   trayEnabled?: boolean;
-  /** 语音播报总开关；缺省表示这次响应里没有可信值。 */
+  /** 手动播报开关：手动触发的碎碎念与对话回复；缺省表示这次响应里没有可信值。 */
   voiceEnabled?: boolean;
   /** 语音音色 id（宿主已按白名单校验，客户端原样展示）。 */
   voiceName?: string;
+  /** 播放音量系数（0–1）；缺省表示这次响应里没有可信值。 */
+  voiceVolume?: number;
   /** 周期碎碎念的语音开关；缺省表示这次响应里没有可信值。 */
   voiceWhisperEnabled?: boolean;
   /** 待办提醒的语音开关；缺省表示这次响应里没有可信值。 */
   voiceTodoEnabled?: boolean;
+  /** 工作状态播报开关；缺省表示这次响应里没有可信值。 */
+  voiceNotifyEnabled?: boolean;
   /** 物理参数：成品已按「内置默认 ← 用户层」填满，缺子键再用内置默认兜底一次。 */
   physics?: PhysicsParams;
   /** 字体：同物理参数。 */
   font?: FontConfig;
+  /** 动作频率权重（main 条目）：缺省表示这次响应里没有可信值。 */
+  animationWeights?: Weights;
   whisperModel?: ModelSelection;
   chatModel?: ModelSelection;
   chatMemoryRounds?: number;
@@ -72,6 +81,7 @@ export function readMainConfig(merged: MergedConfig): MainConfigPatch | null {
   };
   if (typeof main.whisperPrompt === 'string') patch.entryPrompt = main.whisperPrompt;
   if (typeof main.notificationsEnabled === 'boolean') patch.notificationsEnabled = main.notificationsEnabled;
+  if (typeof main.notifyWhenFocused === 'boolean') patch.notifyWhenFocused = main.notifyWhenFocused;
   if (typeof main.clickSoundEnabled === 'boolean') patch.clickSoundEnabled = main.clickSoundEnabled;
   if (typeof main.whisperImageEnabled === 'boolean') patch.whisperImageEnabled = main.whisperImageEnabled;
   if (typeof main.chatImageEnabled === 'boolean') patch.chatImageEnabled = main.chatImageEnabled;
@@ -82,12 +92,15 @@ export function readMainConfig(merged: MergedConfig): MainConfigPatch | null {
   if (typeof main.voiceName === 'string') patch.voiceName = main.voiceName;
   if (typeof main.voiceWhisperEnabled === 'boolean') patch.voiceWhisperEnabled = main.voiceWhisperEnabled;
   if (typeof main.voiceTodoEnabled === 'boolean') patch.voiceTodoEnabled = main.voiceTodoEnabled;
+  if (typeof main.voiceNotifyEnabled === 'boolean') patch.voiceNotifyEnabled = main.voiceNotifyEnabled;
   if (main.physics && typeof main.physics === 'object') {
     patch.physics = { ...DEFAULT_PHYSICS, ...(main.physics as PhysicsParams) };
   }
   if (main.font && typeof main.font === 'object') {
     patch.font = { ...DEFAULT_FONT, ...(main.font as FontConfig) };
   }
+  const weights = parseWeights(main.animationWeights);
+  if (weights) patch.animationWeights = weights;
   const whisperModel = readModel(main.whisperModel);
   if (whisperModel) patch.whisperModel = whisperModel;
   const chatModel = readModel(main.chatModel);
@@ -96,6 +109,9 @@ export function readMainConfig(merged: MergedConfig): MainConfigPatch | null {
   if (rounds !== undefined) patch.chatMemoryRounds = rounds;
   const limit = nonNegative(main.chatImageLimit);
   if (limit !== undefined) patch.chatImageLimit = limit;
+  // 上界在宿主侧已经把关，这里补一次跨进程读回的判定：脏值只影响显示，不让它流到播放端
+  const volume = nonNegative(main.voiceVolume);
+  if (volume !== undefined && volume <= 1) patch.voiceVolume = volume;
   return patch;
 }
 

@@ -51,3 +51,6 @@ dsh-pet/dist-app/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 本地 npm 日志（调试残留，不该入库）
+.npm-logs/

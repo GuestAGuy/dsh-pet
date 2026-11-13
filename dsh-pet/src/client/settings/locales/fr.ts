@@ -9,6 +9,13 @@ export const fr: Record<Key, string> = {
     "Gérez plusieurs compagnons : chacun a sa taille et sa position (appliquées immédiatement après l'enregistrement).",
   // 卡片标题与卡片级说明；说明统一进问号气泡。
   petCardTitle: 'Compagnon',
+  avatarLabel: 'Avatar',
+  avatarHint:
+    'La petite image affichée à côté des messages de ce compagnon dans le panneau de discussion. Sans envoi, le logo par défaut du plugin est utilisé ; un envoi prend effet immédiatement et remplace le précédent, sans cliquer sur « Enregistrer ».',
+  avatarUpload: 'Envoyer un avatar',
+  avatarChange: 'Changer',
+  avatarUploading: 'Envoi…',
+  avatarUploaded: 'Avatar mis à jour',
   petCardHint:
     'Réglages par compagnon : nom / taille / affichage / coin / décalages / les quatre interrupteurs de fonctionnalités. Cliquez sur « Enregistrer » en bas pour appliquer immédiatement.',
   globalTitle: 'Interrupteurs globaux',
@@ -21,6 +28,27 @@ export const fr: Record<Key, string> = {
   'cmd.chat': 'Discussion',
   'cmd.pet': 'Compagnon',
   'cmd.balance': 'Solde',
+  'shortcut.open': 'Ouvrir le chat du compagnon',
+  'shortcut.chat': 'Ouvrir la fenêtre de chat',
+  'shortcut.hear': 'Saisie vocale',
+  'shortcut.capture': 'Capture d’écran vers le chat',
+  shortcutCardTitle: 'Raccourcis',
+  shortcutCardHint: 'Deux groupes une fois déployé : raccourcis du compagnon et raccourcis globaux.',
+  shortcutRowChat: 'Ouvrir le chat',
+  shortcutRowHold: 'Maintenir pour parler',
+  shortcutRowHear: 'Saisie vocale',
+  shortcutRowCapture: 'Capture d’écran',
+  shortcutRowPaste: 'Coller une image',
+  shortcutRowTodo: 'Tâches',
+  shortcutRowSleep: 'Dormir / réveiller',
+  shortcutRowDisplay: 'Position d’affichage',
+  shortcutRowSidebar: 'Ouvrir le chat latéral',
+  shortcutGroupPet: 'Raccourcis du compagnon',
+  shortcutGroupPetHint:
+    'Sur le web, il suffit de survoler le compagnon. Dans la fenêtre du bureau, cliquez d’abord sur le compagnon pour qu’il prenne le focus clavier.',
+  shortcutGroupGlobal: 'Raccourcis globaux',
+  shortcutGroupGlobalHint:
+    'Distribués par DSH dans le web et la fenêtre du bureau ; modifiables dans Réglages → Général → Raccourcis.',
   petsLabel: 'Compagnons',
   add: 'Ajouter un compagnon',
   remove: 'Supprimer',
@@ -109,7 +137,10 @@ export const fr: Record<Key, string> = {
     "Compagnons principaux enregistrés, mais {names} n'ont pas pu être écrits : vérifiez que la configuration du pack est valide et que le dossier est accessible en écriture.",
   notifyToggle: 'Notifications système',
   notifyToggleHint:
-    "Notifications du système d'exploitation (en bas à droite du bureau) pour la fin d'une conversation, les échecs, les demandes de permission et les questions — uniquement lorsque cette fenêtre n'a pas le focus.",
+    "Notifications du système d'exploitation (en bas à droite du bureau) pour la fin d'une conversation, les échecs, les demandes de permission et les questions. Par défaut, uniquement lorsque cette fenêtre n'a pas le focus.",
+  notifyWhenFocusedToggle: 'Notifier aussi au premier plan',
+  notifyWhenFocusedToggleHint:
+    "Affiche les notifications et lit les lignes d'état du travail même lorsque cette page est visible et que la fenêtre a le focus. Désactivé par défaut — activez-le pour ne pas manquer les fins et les échecs pendant que vous regardez la fenêtre.",
   clickSoundToggle: 'Son au clic',
   clickSoundToggleHint:
     "Joue le son intégré (assets/sound/click-duck.wav, volume 0,5) quand on clique sur un compagnon ; les clics répétés en moins de 100 ms ne sonnent qu'une fois, donc plusieurs compagnons ne se superposent jamais. Désactivez-le pour un silence total. Écrit dans la configuration utilisateur avec « Enregistrer ».",
@@ -130,39 +161,55 @@ export const fr: Record<Key, string> = {
     "Affiche une icône dans la zone de notification (barre de menus sur macOS) dès que le mode bureau démarre. Elle liste tous les compagnons de la configuration et permet de basculer chacun entre bureau et web / aucun — y compris ceux qui ne sont pas sur le bureau et n'ont donc aucune fenêtre à cliquer droit. Une fois désactivée, ramener un compagnon sur le bureau exige d'ouvrir le navigateur (la page de configuration, ou un clic droit sur le compagnon web). Windows range déjà ces icônes dans le panneau « icônes masquées ». Mode bureau uniquement.",
   voiceTitle: 'Synthèse vocale',
   voiceHint:
-    "Trois interrupteurs et une voix : l'interrupteur principal commande la lecture automatique, les deux sous-interrupteurs commandent chacun un type de message proactif. Tout est désactivé par défaut et écrit dans la configuration utilisateur lors de l'enregistrement (jamais immédiatement).",
-  voiceEnabled: 'Lecture vocale',
+    "Quatre interrupteurs et une voix : chaque type de parole a son propre interrupteur, aucun ne dépend d'un autre. Tout est désactivé par défaut et écrit dans la configuration utilisateur lors de l'enregistrement (jamais immédiatement).",
+  voiceEnabled: 'Lire les murmures manuels',
   voiceEnabledHint:
-    "Interrupteur principal de la lecture automatique. Désactivé, les murmures périodiques et les rappels de tâches restent muets (les deux sous-interrupteurs ci-dessous n'ont alors aucun effet). Les murmures manuels, les réponses de discussion et le bouton haut-parleur du panneau de discussion ne sont pas concernés — vous les avez demandés, la surface qui les déclenche les lit directement. Cela ne décide que du son émis : bulles, mémoire de discussion et notifications système restent intactes ; un échec de synthèse est seulement journalisé et n'interrompt jamais la conversation.",
+    "Lit les murmures déclenchés par le clic droit ou une commande slash, ainsi que les réponses de discussion. Le bouton haut-parleur du panneau de discussion lit une seule réplique dès que vous appuyez. Cela ne décide que du son émis : bulles, mémoire de discussion et pop-ups de notification système restent intacts ; un échec de synthèse est seulement journalisé et n'interrompt jamais la conversation.",
   voiceWhisperEnabled: 'Lire les murmures',
   voiceWhisperEnabledHint:
-    "Lit le murmure généré périodiquement (un murmure manuel par clic droit n'est pas concerné). Soumis à l'interrupteur principal ci-dessus. Désactivé par défaut — les murmures sont une narration de fond et ne doivent pas faire de bruit sans qu'on le demande.",
+    "Lit le murmure généré périodiquement. Désactivé par défaut — les murmures sont une narration de fond et ne doivent pas faire de bruit sans qu'on le demande.",
   voiceTodoEnabled: 'Lire les rappels de tâches',
   voiceTodoEnabledHint:
-    "Lit un rappel de tâche à son échéance (la bulle s'affiche toujours ; cet interrupteur décide seulement s'il est lu). Soumis à l'interrupteur principal ci-dessus. Désactivé par défaut.",
+    "Lit un rappel de tâche à son échéance (la bulle s'affiche toujours ; cet interrupteur décide seulement s'il est lu). Désactivé par défaut.",
+  voiceNotifyEnabled: "Lire l'état de travail",
+  voiceNotifyEnabledHint:
+    "Lit une réplique d'état de travail configurée quand une tâche se termine, échoue ou attend votre confirmation. Comme les notifications système, elle n'est lue que lorsque vous n'êtes pas sur cette page (autre application, sans focus, réduite) — aucune interruption pendant que vous regardez l'écran. Seule la réplique configurée est lue, jamais le détail de la tâche. Désactivé par défaut.",
   voiceNameLabel: 'Voix',
+  voiceVolumeLabel: 'Volume',
+  voiceVolumeHint:
+    'Volume de lecture en décimal 0–1 : 1 correspond au volume maximal (100 %), 0 coupe le son. Seule l’intensité change et l’audio n’est pas resynthétisé, donc le régler ne coûte rien de plus. Les quatre types de parole partagent ce même volume.',
   physicsTitle: 'Physique (ressenti du glisser-lancer)',
   physicsHint:
     "Valeurs par défaut globales, partagées par tous les compagnons (un pet pack peut les remplacer dans son propre fichier de type) ; écrites dans la configuration utilisateur lors de l'enregistrement (jamais immédiatement). Appliquées immédiatement dans le navigateur ; sur le bureau, après que l'enregistrement a rechargé les fenêtres des compagnons.",
-  'physics.gravity': 'Gravité (gravity)',
+  mobileTitle: 'Effets mobiles',
+  mobileHint:
+    "Ces réglages n'ont de sens que dans un navigateur mobile : la vibration exige un moteur, les deux interrupteurs de mouvement exigent des capteurs d'inclinaison / d'accélération, et ces capteurs ne fonctionnent qu'en HTTPS ou sur localhost.",
+  'physics.gravity': 'Gravité',
   'physics.gravityHint':
     'px/s², plus la valeur est élevée, plus la chute est rapide ; 0 = apesanteur (trajectoire rectiligne uniforme)',
-  'physics.restitution': 'Rebond (restitution)',
+  'physics.restitution': 'Rebond',
   'physics.restitutionHint':
     '0 à 1, proportion de vitesse conservée lors du rebond contre un mur ou le sol (1 = parfaitement élastique, 0 = arrêt net)',
-  'physics.groundFriction': 'Frottement au sol (groundFriction)',
-  'physics.groundFrictionHint': 'par seconde, atténuation de la vitesse horizontale au sol ; 0 = sol verglacé',
-  'physics.throwPower': 'Force de lancer (throwPower)',
+  'physics.groundFriction': 'Frottement de contact',
+  'physics.groundFrictionHint':
+    'par seconde, atténuation de la vitesse le long de toute surface touchée (mur, sol, plafond) ; 0 = verglas partout',
+  'physics.throwPower': 'Force de lancer',
   'physics.throwPowerHint':
     '> 0, multiplicateur global du suivi ressort et de la vitesse de lancer (1 = valeur par défaut ; plus haut = suivi plus ferme et lancers plus violents)',
-  physicsCeilingBounce: 'Rebond au plafond (ceilingBounce)',
+  physicsCeilingBounce: 'Rebond au plafond',
   physicsCeilingBounceHint: "Désactivé, un lancer peut sortir par le haut de l'écran (la gravité le ramène)",
-  physicsPetCollision: 'Collisions entre compagnons (petCollision)',
+  physicsPetCollision: 'Collisions entre compagnons',
   physicsPetCollisionHint:
     'Un compagnon en vol rebondit sur les autres en conservant la quantité de mouvement (masse ∝ taille²)',
   physicsHaptic: 'Vibration aux collisions',
   physicsHapticHint:
     'Une vibration par impact (murs, sol, plafond, autres compagnons). Fonctionne dans Chrome/Edge ; pas sur iOS ni dans les coques WebView comme Via. Le mode Ne pas déranger la bloque.',
+  physicsTilt: 'Gravité par inclinaison',
+  physicsTiltHint:
+    'Inclinez le téléphone : la gravité suit (valeur = celle ci-dessus) ; avec une gravité à 0, l’inclinaison n’a aucun effet. Nécessite HTTPS/localhost.',
+  physicsShake: 'Secouer pour lancer',
+  physicsShakeHint:
+    'Secouez pour lancer le compagnon dans le sens du geste ; la force suit throwPower. Indépendant de la gravité, donc utilisable à gravité 0. Nécessite HTTPS/localhost.',
   invalidPhysics:
     'Vérifiez les paramètres physiques : gravité / frottement au sol ≥ 0, rebond entre 0 et 1, force de lancer > 0.',
   fontTitle: 'Apparence et police',
@@ -186,7 +233,7 @@ export const fr: Record<Key, string> = {
   'font.simsun': 'SimSun',
   'font.comic': 'Comic Sans MS',
   'font.system': 'Police système',
-  modelTitle: "Modèles d'IA et contexte de discussion",
+  modelTitle: 'Discussion et modèles',
   modelHint:
     "Quel modèle utilisent les murmures et la discussion, et combien d'historique chaque requête transporte. « Suivre la conversation actuelle » utilise le modèle de votre conversation en cours (par défaut). Valeur globale par défaut : s'applique à tous les compagnons, et un pet pack peut la remplacer dans son propre fichier de type. Les options viennent de la même source que le sélecteur de modèles de DSH, fournies en direct par l'hôte.",
   modelFollow: 'Suivre la conversation actuelle',
@@ -243,5 +290,12 @@ export const fr: Record<Key, string> = {
     '2. Retirez le plugin lui-même (dans un terminal ; il est aussi retiré de la couche bundle du profil) :',
   uninstallStep3:
     '3. Supprimez les emplacements ci-dessus selon vos besoins : les caches sont sans risque ; supprimer les « données utilisateur du plugin » fait perdre la configuration et la mémoire de discussion (sauvegardez main-config.jsonc si vous voulez le garder).',
+  motionTitle: 'Fréquence des actions',
+  motionHint:
+    "Quatre champs : repos / rotation / déplacement sont modifiables ; l'action aléatoire est calculée (100 − les trois autres). Valeur globale pour tous les compagnons ; un pet pack peut la remplacer dans son fichier de type.",
+  'motion.idle': 'Repos',
+  'motion.turn': 'Rotation',
+  'motion.move': 'Déplacement',
+  'motion.action': 'Action aléatoire',
   uninstallCmd: 'dsh plugin --profile {profile} remove dsh-pet',
 };

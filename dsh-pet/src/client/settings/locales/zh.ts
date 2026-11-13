@@ -7,6 +7,13 @@ export const zh = {
   intro: '管理多个桌宠：每个宠物可独立设置大小与位置（保存后即时生效）。',
   // 卡片标题与卡片级说明；说明统一进问号气泡。
   petCardTitle: '宠物配置',
+  avatarLabel: '头像',
+  avatarHint:
+    '对话面板里这条宠物消息旁边显示的小图。没上传过就是插件默认图；上传后立即生效并覆盖旧图，不需要点「保存」。',
+  avatarUpload: '上传头像',
+  avatarChange: '更换',
+  avatarUploading: '上传中…',
+  avatarUploaded: '头像已更新',
   petCardHint:
     '每只宠物独立配置：名字 / 大小 / 显示位置 / 位置 / 偏移 / 四个功能开关。改完点最下面的「保存」即时生效。',
   globalTitle: '全局开关',
@@ -19,6 +26,26 @@ export const zh = {
   'cmd.chat': '对话',
   'cmd.pet': '桌宠',
   'cmd.balance': '余额',
+  // 设置 → 通用 → 快捷键里的命令标题。
+  'shortcut.open': '打开桌宠对话',
+  'shortcut.chat': '打开对话弹窗',
+  'shortcut.hear': '语音输入',
+  'shortcut.capture': '截图到对话',
+  shortcutCardTitle: '快捷键',
+  shortcutCardHint: '展开后分两组：桌宠快捷键与全局快捷键。',
+  shortcutRowChat: '打开对话',
+  shortcutRowHold: '按住说话',
+  shortcutRowHear: '语音输入',
+  shortcutRowCapture: '截图',
+  shortcutRowPaste: '粘贴图片',
+  shortcutRowTodo: '待办事项',
+  shortcutRowSleep: '睡觉 / 起来',
+  shortcutRowDisplay: '显示位置',
+  shortcutRowSidebar: '打开侧栏对话',
+  shortcutGroupPet: '桌宠快捷键',
+  shortcutGroupPetHint: '网页端鼠标停在宠物上即可；桌面宠物窗口要先点一下宠物，拿到键盘焦点后才生效。',
+  shortcutGroupGlobal: '全局快捷键',
+  shortcutGroupGlobalHint: '网页端与桌面版窗口里由 DSH 分发；可在「设置 → 通用 → 快捷键」改绑。',
   petsLabel: '宠物列表',
   add: '添加宠物',
   remove: '删除',
@@ -99,7 +126,11 @@ export const zh = {
   lastOfKind: '「{entry}」只剩这一只，删掉就没有这个种类了。要彻底移除请直接删除该角色包文件。',
   savePartial: '主宠物已保存，但 {names} 没能写回：检查该角色包配置是否合法、目录是否可写。',
   notifyToggle: '系统通知',
-  notifyToggleHint: '对话完成 / 生成失败 / 权限申请 / 用户选择，在窗口失焦时弹出系统级通知（桌面右下角）。',
+  notifyToggleHint:
+    '对话完成 / 生成失败 / 权限申请 / 用户选择时弹出系统级通知（桌面右下角）。默认只在窗口失焦时弹，看本页时不打扰。',
+  notifyWhenFocusedToggle: '前台聚焦时也提醒',
+  notifyWhenFocusedToggleHint:
+    '开着本页、窗口也在前台时，照样弹系统通知、照样播报工作状态语音。默认关闭——想在前台也不漏掉完成与报错时打开。',
   clickSoundToggle: '点击音效',
   clickSoundToggleHint:
     '点一下宠物播一声内置音效（assets/sound/click-duck.wav，音量 0.5；100ms 内的连续点击只响一次，多开也不会叠音）。关掉即完全静音。随「保存」写入用户配置。',
@@ -120,34 +151,47 @@ export const zh = {
     '桌面模式启动后在通知区域（macOS 为菜单栏）常驻一个图标，列出配置里的全部宠物，勾选就能切换显示位置——包括当前不在桌面、没有窗口可右键的那些。关掉之后要把宠物叫回桌面，只能开浏览器用设置页，或在网页端那只宠物身上右键。Windows 本来就会把它折叠进「隐藏的图标」面板。仅影响桌面模式。',
   voiceTitle: '语音播报',
   voiceHint:
-    '桌宠出声的三个开关与音色：总开关管自动播报，两个细分开关各管一类主动消息。默认全关，随「保存」写入用户配置（不做即时写入）。',
-  voiceEnabled: '语音播报',
+    '桌宠出声的四个开关与音色：每类语音各一个开关，互不从属。默认全关，随「保存」写入用户配置（不做即时写入）。',
+  voiceEnabled: '手动播报',
   voiceEnabledHint:
-    '自动播报的总开关。关掉后周期碎碎念与待办提醒都不念（下面两个细分开关不起作用）；手动碎碎念、对话回复与对话面板的喇叭按钮不受它限制——那些是你主动点的，发起的那一端直接念。只影响「说不说」：气泡、对话记忆与系统通知都不受影响；合成失败只留日志，不打断对话。',
+    '右键菜单、斜杠命令触发的碎碎念，以及对话回复念出来。对话面板的喇叭按钮是单句点播，随时可点。只影响「说不说」：气泡、对话记忆与系统通知弹窗都不受影响；合成失败只留日志，不打断对话。',
   voiceWhisperEnabled: '碎碎念播报',
-  voiceWhisperEnabledHint:
-    '周期生成的那句碎碎念念出来（手动右键的碎碎念不受本项影响）。受上面的总开关约束：总开关关掉时本项不起作用。默认关闭——碎碎念是背景旁白，不该默认出声。',
+  voiceWhisperEnabledHint: '周期生成的那句碎碎念念出来。默认关闭——碎碎念是背景旁白，不该默认出声。',
   voiceTodoEnabled: '待办播报',
-  voiceTodoEnabledHint: '到点的待办提醒念出来（同一句照样弹气泡，本项只决定念不念）。受上面的总开关约束。默认关闭。',
+  voiceTodoEnabledHint: '到点的待办提醒念出来（同一句照样弹气泡，本项只决定念不念）。默认关闭。',
+  voiceNotifyEnabled: '通知播报',
+  voiceNotifyEnabledHint:
+    '任务完成、出错、等你确认时念一句该档位配置的工作状态文案。和系统通知同一取向：用户不在本页（切走、失焦、最小化）时才念，正看着屏幕时不打扰。只念配置里的台词，不念任务详情。默认关闭。',
   voiceNameLabel: '音色',
+  voiceVolumeLabel: '音量',
+  voiceVolumeHint:
+    '播报音量，0–1 的小数：1 是最大音量（100%），0 是静音。只改播放响度，不会重新合成音频，调它不额外花钱。四类语音共用这一个音量。',
   physicsTitle: '物理（拖拽抛掷手感）',
   physicsHint:
     '全局默认，所有宠物共用（pet pack 可在自己种类文件里单独覆盖）；随「保存」写入用户配置（不做即时写入）。浏览器保存后即时生效，桌面端由保存重载宠物窗口后生效。',
-  'physics.gravity': '重力 gravity',
+  mobileTitle: '移动端效果',
+  mobileHint:
+    '这几项只在手机浏览器上有意义：振动要有马达，两个体感开关要有姿态 / 加速度传感器；传感器还要求 HTTPS 或 localhost。',
+  'physics.gravity': '重力',
   'physics.gravityHint': 'px/s²，越大落得越快；0 = 无重力（抛出去匀速直线飞）',
-  'physics.restitution': '弹性 restitution',
+  'physics.restitution': '弹性',
   'physics.restitutionHint': '0~1，碰壁 / 落地反弹保留的速度比例（1 = 完全弹性，0 = 撞上即停）',
-  'physics.groundFriction': '地面摩擦 groundFriction',
-  'physics.groundFrictionHint': '/s，落地后水平速度的衰减率；0 = 冰面不减速',
-  'physics.throwPower': '总力度 throwPower',
+  'physics.groundFriction': '接触摩擦',
+  'physics.groundFrictionHint': '/s，撞墙 / 落地 / 撞顶后沿接触面方向的速度衰减率；0 = 四面都像冰面',
+  'physics.throwPower': '总力度',
   'physics.throwPowerHint': '> 0，弹簧跟手与甩出初速的整体倍率（1 = 默认；越大越跟手、甩得越猛）',
-  physicsCeilingBounce: '顶部反弹 ceilingBounce',
+  physicsCeilingBounce: '顶部反弹',
   physicsCeilingBounceHint: '关掉后抛掷可飞出屏幕顶部（重力仍会把它拉回来）',
-  physicsPetCollision: '宠物互撞 petCollision',
+  physicsPetCollision: '宠物互撞',
   physicsPetCollisionHint: '飞行中的宠物撞到别的宠物按动量守恒弹开（质量 ∝ 尺寸²）',
-  physicsHaptic: '碰撞震动 hapticEnabled',
+  physicsHaptic: '碰撞震动',
   physicsHapticHint:
     '撞墙、落地、撞顶、互撞各震一下。Chrome / Edge 可用；iOS 与 Via 等 WebView 壳不生效；勿扰模式会挡住振动。',
+  physicsTilt: '倾斜控制重力',
+  physicsTiltHint: '倾斜手机 = 重力朝那边，大小就是上面的重力值；重力为 0 时倾斜没有效果。需要 HTTPS 或 localhost。',
+  physicsShake: '摇一摇抛出',
+  physicsShakeHint:
+    '摇一摇沿甩动方向把宠物甩出去，力度 = 基准 × 总力度；与重力无关，重力设 0 也能甩。需要 HTTPS 或 localhost。',
   invalidPhysics: '请检查物理参数：重力 / 地面摩擦 ≥ 0，弹性 0~1，总力度 > 0。',
   fontTitle: '外观与字体',
   fontHint:
@@ -168,7 +212,7 @@ export const zh = {
   'font.simsun': '宋体',
   'font.comic': '漫画体',
   'font.system': '系统默认',
-  modelTitle: 'AI 模型与对话上下文',
+  modelTitle: '对话与模型',
   modelHint:
     '碎碎念与对话各自用哪个模型，以及对话每次带多少历史进上下文。选「跟随当前对话」= 用你当前对话正在用的那个模型（默认）。全局默认：对所有宠物生效，pet pack 可在自己种类文件里单独覆盖。选项与 DSH 的模型选择器同源，由宿主实时提供。',
   modelFollow: '跟随当前对话',
@@ -213,6 +257,13 @@ export const zh = {
   uninstallStep2: '2. 卸载插件本体（终端执行，会同时从 profile 的 bundle 层移除）：',
   uninstallStep3:
     '3. 按需删除上面的位置：缓存类删了无影响；「插件用户数据」删了会丢配置与对话记忆（想保留就先备份其中的 main-config.jsonc）。',
+  motionTitle: '动作频率',
+  motionHint:
+    '四个框：待机 / 转向 / 移动可改，随机动作自动算（= 100 − 其余三项）。全局默认，所有宠物共用；pet pack 可在自己种类文件里覆盖。',
+  'motion.idle': '待机',
+  'motion.turn': '转向',
+  'motion.move': '移动',
+  'motion.action': '随机动作',
   uninstallCmd: 'dsh plugin --profile {profile} remove dsh-pet',
 };
 

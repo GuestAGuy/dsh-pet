@@ -12,9 +12,14 @@ import { takeMenuEvents } from './menu-service.ts';
 import { getStateSnapshot } from './state-service.ts';
 import { dicts, makePetConfigSection, NS, petBridge } from './settings.ts';
 import { initNotify } from './notify.ts';
+import { mountBaifan } from './baifan.ts';
+import { makeBaifanLayer } from './baifan/layer.ts';
 import { installCommandFaces, type CommandFace, type CommandUiLike } from './command-faces.ts';
 import { installSectionNavIcon } from './nav-icon.ts';
-import { registerPetChatTab } from './chat/register.ts';
+import { registerPetChatTab, openPetChatTab } from './chat/register.ts';
+import { PET_CHAT_COMMAND_ID, registerPetChatShortcut } from './chat/shortcut.ts';
+import { dicts as chatDicts, NS as CHAT_NS } from './chat/locales/index.ts';
+import { registerPetCardShortcuts } from './pet/card/shortcut.ts';
 import type * as ReactNS from 'react';
 import type * as PrimitivesNS from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -70,6 +75,9 @@ export function makeFactory(): (require: (mod: string) => any) => any {
       // 设置页文案字典。
       ctx.effect(() => ctx.locale.register(NS, dicts), 'dsh-pet: dictionaries');
       const t = ctx.locale.bind(NS);
+      // 侧栏对话的文案独立成命名空间：只覆盖对话面板，不与设置页字典混在一起。
+      ctx.effect(() => ctx.locale.register(CHAT_NS, chatDicts), 'dsh-pet: chat dictionaries');
+      const chatT = ctx.locale.bind(CHAT_NS);
 
       // 同页第三方插件可通过 Cordis 服务 petApi7340 读取本页宠物的实况、播放进度、最近一拍状态与菜单点击。
       // 只开读，控制仍走 HTTP，避免出现两条控制通道。
@@ -80,6 +88,13 @@ export function makeFactory(): (require: (mod: string) => any) => any {
         menuEvents: takeMenuEvents,
         pose: readPose,
         progress: readProgress,
+      });
+
+      // 内置玩法「吃白饭」：覆盖层注册进 shell.overlay（与桌宠同槽），不自己挂 body——
+      // body 直接子级会命中宿主的 macOS no-drag 规则，还会越级盖住宿主模态框。
+      const BaifanLayer = makeBaifanLayer({ h, useRef, useEffect }, (host) => mountBaifan(ctx, host));
+      ctx.slots.inject('shell.overlay', function* () {
+        yield ctx.slots.register({ name: 'shell.overlay', id: 'baifan', order: 1100 }, BaifanLayer);
       });
 
       // 系统通知：host 把通知帧写进 /state 的 sections.notify，统一轮询发现变化后弹 toast。
@@ -173,7 +188,7 @@ export function makeFactory(): (require: (mod: string) => any) => any {
 
       // 设置页「桌宠配置」：大小、位置、模型，保存即时生效。
       // useRef 供「AI 模型」下拉的浮层定位与外部点击判定使用。
-      const PetConfigSection = makePetConfigSection({ h, useState, useEffect, useRef, useCallback, t });
+      const PetConfigSection = makePetConfigSection({ h, useState, useEffect, useRef, useCallback, t }, ctx);
       ctx.slots.inject('settings.section', function* () {
         yield ctx.slots.register(
           { name: 'settings.section', id: 'pet-config', order: 30, label: () => t('nav'), inject: () => ({ t }) },
@@ -181,26 +196,50 @@ export function makeFactory(): (require: (mod: string) => any) => any {
         );
       });
 
+      // 快捷键独立注册：不挂在侧栏注册里——侧栏服务缺失时侧栏没了，快捷键不该跟着没。
+      // 三条命令共用 app-shortcut 的注册壳，任何一条失败都只丢它自己。
+      let sidebarChatReady = false;
+      ctx.effect(() => {
+        const sidebarChat = registerPetChatShortcut(
+          ctx,
+          () => t('shortcut.open'),
+          () => openPetChatTab(ctx),
+        );
+        sidebarChatReady = sidebarChat.registered;
+        const card = registerPetCardShortcuts(ctx, (key) => t(key));
+        return () => {
+          sidebarChatReady = false;
+          sidebarChat.dispose();
+          card.dispose();
+        };
+      }, 'dsh-pet: shortcuts');
+
       // 右侧栏「桌宠对话」：可选能力，服务缺失时只告警，不影响其它部位。
       // 确认弹窗用平台原语（primitives 缺失时面板内部退化为内联确认条）。
       // 整体再兜一层：任何注册异常都不许拖垮插件激活（否则整个 Web 端进不去）。
       ctx.effect(() => {
         try {
-          return registerPetChatTab(ctx, {
-            h,
-            useEffect,
-            useRef,
-            useState,
-            ...(primitives === undefined
-              ? {}
-              : {
-                  ui: {
-                    Modal: primitives.Modal,
-                    Button: primitives.Button,
-                    ImageLightbox: primitives.ImageLightbox,
-                  },
-                }),
-          });
+          return registerPetChatTab(
+            ctx,
+            {
+              h,
+              useEffect,
+              useRef,
+              useState,
+              t: chatT,
+              ...(primitives === undefined
+                ? {}
+                : {
+                    ui: {
+                      Modal: primitives.Modal,
+                      Button: primitives.Button,
+                      ImageLightbox: primitives.ImageLightbox,
+                    },
+                  }),
+            },
+            // 命令没登记成功就不带 commandId：指向不存在的命令会让侧栏注册抛错
+            sidebarChatReady ? { commandId: PET_CHAT_COMMAND_ID } : {},
+          );
         } catch (error) {
           console.error('[dsh-pet] 右侧栏对话面板注册失败（已忽略，不影响启动）：', error);
           return () => {};

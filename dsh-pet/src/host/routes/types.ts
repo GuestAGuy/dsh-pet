@@ -8,6 +8,7 @@
  */
 import type { ChatMemoryMessage } from '../chat.ts';
 import type { ConfigPaths } from '../config.ts';
+import type { EnvironmentFacts } from '../environment.ts';
 import type { RouteResult } from '../http.ts';
 import type { PetImageRef } from '../image-attachment.ts';
 import type { LockStore } from '../lock.ts';
@@ -19,6 +20,7 @@ import type { SleepStore } from '../sleep.ts';
 import type { PollStateStore } from '../state.ts';
 import type { VoiceTarget } from '../surface.ts';
 import type { TodoStore } from '../todo/store.ts';
+import type { HearService } from '../voice/hear.ts';
 import type { VoiceService } from '../voice/speak.ts';
 import type { WorkStatusStore } from '../work-status.ts';
 
@@ -126,8 +128,10 @@ export interface PetRouteDeps {
   readonly thumbUserRoot: string;
   /** 用户表情包目录。 */
   readonly memesUserRoot: string;
-  /** 刷新余额（manual 表示用户主动触发）。 */
-  readonly refreshBalance: (manual?: boolean) => Promise<void>;
+  /** 刷新余额（manual 表示用户主动触发；petId 表示这次只让该宠物显示，缺省不写归属）。 */
+  readonly refreshBalance: (manual?: boolean, petId?: string) => Promise<void>;
+  /** 查此刻的环境（城市 + 天气）；fresh 为真时跳过缓存强制重查。 */
+  readonly environment: (opts?: { fresh?: boolean }) => Promise<EnvironmentFacts>;
   /** 生成一条碎碎念；image 给了就用这张图（需在池内），缺省 = 按配置随机抽一张或纯文本。
    *  voiceTo 由带 `?surface=` 的路由传请求面；kind=whisper 时按 voiceWhisperEnabled 决定要不要念。 */
   readonly publishWhisper: (
@@ -159,4 +163,6 @@ export interface PetRouteDeps {
   readonly assetRootFor: (ext: string) => string;
   /** 语音合成服务（校验、排队、缓存与上游调用都在里面）。 */
   readonly voice: VoiceService;
+  /** 语音识别服务（音频转文字；宿主没启用语音输入时由它自己回 unsupported）。 */
+  readonly speech: HearService;
 }

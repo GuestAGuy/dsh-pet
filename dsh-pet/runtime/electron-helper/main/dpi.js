@@ -3,12 +3,13 @@
  * DPI 与指针：主屏缩放的探测与缓存、强制缩放开关、渲染端 scale 换算、光标位置。
  *
  * 线性化必须赶在 ready 之前 appendSwitch，所以工厂在 main.js 顶层调用；探测子进程复用同一个
- * main.js（mainPath 传入），只打一行 scaleFactor 就退出。
+ * main.js（mainPath 传入），只打一行 scaleFactor 就退出。启动时优先用缓存；缓存是旧值（串流、
+ * 远程桌面改过缩放）时窗口会按错误倍数建出来，运行期靠 displays 的自查 + setPrimaryScale 纠正。
  * @module dsh-pet/runtime/electron-helper/main-dpi
  */
 
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFile, execFileSync } = require('node:child_process');
 const { readFileSync, writeFileSync } = require('node:fs');
 const { shouldLinearize, resolveForcedScale, resolvePetScale } = require('../dpi-linearization.js');
 
@@ -49,11 +50,19 @@ function createDpi({ app, screen, mainPath, linuxPointer, dpiProbe, dpiMark, for
     }
   }
 
+  /**
+   * 写缓存。
+   *
+   * @param value - 主屏缩放。
+   * @returns 是否写成功；写不进去时调用方要能说清「下次冷启动仍会读到旧值」。
+   */
   function writeCachedPrimaryScale(value) {
     try {
       writeFileSync(dpiCacheFile(), JSON.stringify({ scaleFactor: value }), 'utf8');
+      return true;
     } catch (e) {
       console.error('[dsh-pet-desktop-helper] write dpi cache failed:', String(e && e.message ? e.message : e));
+      return false;
     }
   }
 
@@ -64,18 +73,32 @@ function createDpi({ app, screen, mainPath, linuxPointer, dpiProbe, dpiMark, for
     return Number.isFinite(v) && v > 0 ? v : 0;
   }
 
-  /** 拉起探测子进程读主屏 scaleFactor（同一个 electron + 同一个 main.js，走 dpiProbe 分支） */
-  function probePrimaryScale() {
-    const opts = {
+  /** 探测子进程的环境与超时设置 */
+  function dpiProbeOptions() {
+    return {
       env: { ...process.env, DSH_PET_DPI_PROBE: '1', DSH_PET_BRIDGE: '0', DSH_PET_SMOKE: '0' },
       timeout: 20000,
       encoding: 'utf8',
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     };
+  }
+
+  /**
+   * 探测子进程的命令行开关。
+   *
+   * 必须与主进程同一套：沙箱起不来的机器上，宿主的自动回退会改用 --no-sandbox，不带上的话探测
+   * 子进程一启动就 0x80000003，主进程活着、缓存却永远写不出来，每次开机都要白探一次。
+   */
+  function dpiProbeArgs() {
+    return app.commandLine.hasSwitch('no-sandbox') ? ['--no-sandbox'] : [];
+  }
+
+  /** 拉起探测子进程读主屏 scaleFactor（同一个 electron + 同一个 main.js，走 dpiProbe 分支） */
+  function probePrimaryScale() {
     let out = '';
     try {
-      out = execFileSync(process.execPath, [mainPath, '--dsh-pet-dpi-probe'], opts);
+      out = execFileSync(process.execPath, [...dpiProbeArgs(), mainPath, '--dsh-pet-dpi-probe'], dpiProbeOptions());
     } catch (e) {
       // 只认 stdout，不认退出码：不开窗口的 Electron 进程调 app.exit() 在 Windows 上偶发
       // 0xC0000005（退出期访问违例），但那时值早就写出来了，丢掉它纯属浪费一次冷启动。
@@ -100,17 +123,71 @@ function createDpi({ app, screen, mainPath, linuxPointer, dpiProbe, dpiMark, for
     return v;
   }
 
+  /**
+   * 异步探一次真实主屏缩放。
+   *
+   * 运行期自查发生在宠物已经在动的时候，不能像启动那样阻塞主进程 0.3–0.6 秒。本函数不写缓存，
+   * 调用方比对后自行决定是否 writeCachedPrimaryScale。
+   *
+   * @returns 真实缩放；探测失败或输出里没有值时 0（不抛）。
+   */
+  function probePrimaryScaleAsync() {
+    return new Promise((resolve) => {
+      const done = (error, stdout) => {
+        // 与同步版同一口径：退出码不作数，stdout 里有值就算数（退出期访问违例不影响已写出的值）
+        const value = parseProbeOutput(stdout);
+        if (!(value > 0) && error) {
+          console.error(
+            '[dsh-pet-desktop-helper] dpi probe failed:',
+            String(error && error.message ? error.message : error).split('\n')[0],
+          );
+        }
+        resolve(value);
+      };
+      try {
+        execFile(process.execPath, [...dpiProbeArgs(), mainPath, '--dsh-pet-dpi-probe'], dpiProbeOptions(), done);
+      } catch (error) {
+        console.error(
+          '[dsh-pet-desktop-helper] dpi probe failed:',
+          String(error && error.message ? error.message : error).split('\n')[0],
+        );
+        resolve(0);
+      }
+    });
+  }
+
   /** 真实主屏 scaleFactor（探测所得；0 = 未知）。开启线性化后 screen API 只会报 1，只能靠它。 */
   let PRIMARY_SCALE = 0;
   /** 实际生效的强制缩放（0 = 未启用，坐标系维持修复前的逐屏 DIP） */
   let FORCED_SCALE = 0;
   if (shouldLinearize({ platform: process.platform, dpiProbe, forceDsf })) {
-    PRIMARY_SCALE = readCachedPrimaryScale() || probePrimaryScale();
-    const forced = resolveForcedScale({ forceDsf, primaryScale: PRIMARY_SCALE });
-    if (forced > 0) {
-      app.commandLine.appendSwitch('force-device-scale-factor', String(forced));
-      FORCED_SCALE = forced;
+    // 探测失败只能退化为"不补偿"，不能把整个 helper 带走：受限令牌下
+    // getPath('userData') 与探测子进程都可能失败，进程会在 ready 之前直接结束且无日志。
+    try {
+      PRIMARY_SCALE = readCachedPrimaryScale() || probePrimaryScale();
+      const forced = resolveForcedScale({ forceDsf, primaryScale: PRIMARY_SCALE });
+      if (forced > 0) {
+        app.commandLine.appendSwitch('force-device-scale-factor', String(forced));
+        FORCED_SCALE = forced;
+      }
+    } catch (error) {
+      console.error(
+        '[dsh-pet-desktop-helper] dpi 探测失败，按不补偿继续:',
+        String(error && error.message ? error.message : error),
+      );
+      PRIMARY_SCALE = 0;
+      FORCED_SCALE = 0;
     }
+  }
+
+  /**
+   * 校正运行中的主屏缩放。调用方须在之后重建窗口，petScale() 才会落进新窗口。
+   *
+   * @param value - 探测到的真实缩放；非数字或非正数时忽略。
+   */
+  function setPrimaryScale(value) {
+    const scale = Number(value);
+    if (Number.isFinite(scale) && scale > 0) PRIMARY_SCALE = scale;
   }
 
   /**
@@ -129,7 +206,10 @@ function createDpi({ app, screen, mainPath, linuxPointer, dpiProbe, dpiMark, for
     currentPointer,
     petScale,
     probePrimaryScale,
+    probePrimaryScaleAsync,
     readCachedPrimaryScale,
+    setPrimaryScale,
+    writeCachedPrimaryScale,
     get primaryScale() {
       return PRIMARY_SCALE;
     },

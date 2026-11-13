@@ -8,6 +8,13 @@ export const de: Record<Key, string> = {
   intro: 'Mehrere Pets verwalten: Jedes Pet hat eigene Größe und Position (gilt sofort nach dem Speichern).',
   // 卡片标题与卡片级说明；说明统一进问号气泡。
   petCardTitle: 'Pet-Konfiguration',
+  avatarLabel: 'Avatar',
+  avatarHint:
+    'Das kleine Bild neben den Nachrichten dieses Pets im Chatfenster. Ohne Upload erscheint das Standard-Logo des Plugins; ein Upload greift sofort und ersetzt das vorherige — „Speichern" ist nicht nötig.',
+  avatarUpload: 'Avatar hochladen',
+  avatarChange: 'Ändern',
+  avatarUploading: 'Wird hochgeladen…',
+  avatarUploaded: 'Avatar aktualisiert',
   petCardHint:
     'Einstellungen pro Pet: Name / Größe / Anzeige / Position / Offsets / die vier Funktionsschalter. Nach dem Ändern unten auf „Speichern" klicken – gilt sofort.',
   globalTitle: 'Globale Schalter',
@@ -20,6 +27,27 @@ export const de: Record<Key, string> = {
   'cmd.chat': 'Chat',
   'cmd.pet': 'Pet',
   'cmd.balance': 'Guthaben',
+  'shortcut.open': 'Pet-Chat öffnen',
+  'shortcut.chat': 'Chatfenster öffnen',
+  'shortcut.hear': 'Spracheingabe',
+  'shortcut.capture': 'Bildschirmfoto in den Chat',
+  shortcutCardTitle: 'Tastenkürzel',
+  shortcutCardHint: 'Aufgeklappt zwei Gruppen: Pet-Tastenkürzel und globale Tastenkürzel.',
+  shortcutRowChat: 'Chat öffnen',
+  shortcutRowHold: 'Zum Sprechen halten',
+  shortcutRowHear: 'Spracheingabe',
+  shortcutRowCapture: 'Bildschirmfoto',
+  shortcutRowPaste: 'Bild einfügen',
+  shortcutRowTodo: 'Aufgaben',
+  shortcutRowSleep: 'Schlafen / Aufwachen',
+  shortcutRowDisplay: 'Anzeigeposition',
+  shortcutRowSidebar: 'Seitenleisten-Chat öffnen',
+  shortcutGroupPet: 'Pet-Tastenkürzel',
+  shortcutGroupPetHint:
+    'Im Web genügt der Zeiger auf dem Pet. Im Desktop-Fenster zuerst auf das Pet klicken, damit es den Tastaturfokus bekommt.',
+  shortcutGroupGlobal: 'Globale Tastenkürzel',
+  shortcutGroupGlobalHint:
+    'Werden von DSH im Web und im Desktop-Fenster verteilt; änderbar unter Einstellungen → Allgemein → Tastenkürzel.',
   petsLabel: 'Pet-Liste',
   add: 'Pet hinzufügen',
   remove: 'Entfernen',
@@ -108,7 +136,10 @@ export const de: Record<Key, string> = {
     'Haupt-Pets gespeichert, aber {names} konnten nicht zurückgeschrieben werden: Prüfen Sie, ob die Pack-Konfiguration gültig und das Verzeichnis beschreibbar ist.',
   notifyToggle: 'Systembenachrichtigungen',
   notifyToggleHint:
-    'System-Toasts (unten rechts auf dem Desktop) bei Abschluss einer Konversation, Fehlern, Berechtigungsanfragen und Rückfragen – nur wenn das Fenster nicht fokussiert ist.',
+    'System-Toasts (unten rechts auf dem Desktop) bei Abschluss einer Konversation, Fehlern, Berechtigungsanfragen und Rückfragen. Standardmäßig nur, wenn das Fenster nicht fokussiert ist.',
+  notifyWhenFocusedToggle: 'Auch bei Fokus benachrichtigen',
+  notifyWhenFocusedToggleHint:
+    'Zeigt Toasts und liest Arbeitsstatus-Zeilen auch dann vor, wenn diese Seite sichtbar und das Fenster fokussiert ist. Standardmäßig aus – einschalten, wenn Abschlüsse und Fehler auch beim Hinsehen nicht verloren gehen sollen.',
   clickSoundToggle: 'Klick-Sound',
   clickSoundToggleHint:
     'Beim Klick auf ein Pet ertönt der integrierte Klick-Sound (assets/sound/click-duck.wav, Lautstärke 0.5); Klicks innerhalb von 100 ms werden nur einmal abgespielt, auch bei mehreren Pets überlagert sich nichts. Aus = völlig stumm. Wird beim „Speichern" in die Benutzerkonfiguration geschrieben.',
@@ -129,37 +160,53 @@ export const de: Record<Key, string> = {
     'Zeigt im Desktop-Modus ein Tray-Symbol (Windows: Infobereich, macOS: Menüleiste). Es listet alle Pets der Konfiguration und schaltet die Anzeige um – auch für Pets, die gerade nicht auf dem Desktop sind und kein Fenster zum Rechtsklicken haben. Ohne Tray lässt sich ein Pet nur über den Browser (Einstellungsseite oder Rechtsklick auf das Web-Pet) zurück auf den Desktop holen. Windows blendet das Symbol ohnehin in die „ausgeblendeten Symbole" aus. Nur Desktop-Modus.',
   voiceTitle: 'Sprachausgabe',
   voiceHint:
-    'Drei Schalter und eine Stimme: Der Hauptschalter steuert die automatische Ausgabe, die beiden Unterschalter je eine Art proaktiver Meldung. Standardmäßig alle aus; wird beim „Speichern" in die Benutzerkonfiguration geschrieben (kein sofortiges Schreiben).',
-  voiceEnabled: 'Sprachausgabe aktivieren',
+    'Vier Schalter und eine Stimme: Jede Art von Sprachausgabe hat ihren eigenen Schalter, keiner hängt von einem anderen ab. Standardmäßig alle aus; wird beim „Speichern" in die Benutzerkonfiguration geschrieben (kein sofortiges Schreiben).',
+  voiceEnabled: 'Manuelles Flüstern sprechen',
   voiceEnabledHint:
-    'Hauptschalter für die automatische Sprachausgabe. Aus = regelmäßige Flüstern-Sätze und To-do-Erinnerungen werden nicht gesprochen (die beiden Unterschalter unten wirken dann nicht). Manuelles Flüstern, Chat-Antworten und die Lautsprecher-Schaltfläche im Chat-Panel sind nicht betroffen – die haben Sie selbst ausgelöst, die sprechen direkt. Es betrifft nur das Sprechen: Blasen, Chat-Gedächtnis und Systembenachrichtigungen bleiben unberührt; eine fehlgeschlagene Synthese wird nur protokolliert und unterbricht den Chat nicht.',
+    'Spricht Flüstern-Sätze, die über das Kontextmenü oder einen Slash-Befehl ausgelöst werden, sowie Chat-Antworten. Die Lautsprecher-Schaltfläche im Chat-Panel spricht einen einzelnen Satz, sobald Sie sie drücken. Es betrifft nur das Sprechen: Blasen, Chat-Gedächtnis und Systembenachrichtigungs-Popups bleiben unberührt; eine fehlgeschlagene Synthese wird nur protokolliert und unterbricht den Chat nicht.',
   voiceWhisperEnabled: 'Flüstern sprechen',
   voiceWhisperEnabledHint:
-    'Spricht den regelmäßig erzeugten Flüstern-Satz (manuelles Flüstern per Rechtsklick bleibt unberührt). Unterliegt dem Hauptschalter oben: Ist er aus, wirkt dieser Schalter nicht. Standardmäßig aus – Flüstern ist Hintergrundbegleitung und sollte nicht ungefragt Geräusche machen.',
+    'Spricht den regelmäßig erzeugten Flüstern-Satz. Standardmäßig aus – Flüstern ist Hintergrundbegleitung und sollte nicht ungefragt Geräusche machen.',
   voiceTodoEnabled: 'To-do-Erinnerungen sprechen',
   voiceTodoEnabledHint:
-    'Spricht eine fällige To-do-Erinnerung (die Blase erscheint weiterhin; dieser Schalter entscheidet nur, ob gesprochen wird). Unterliegt dem Hauptschalter oben. Standardmäßig aus.',
+    'Spricht eine fällige To-do-Erinnerung (die Blase erscheint weiterhin; dieser Schalter entscheidet nur, ob gesprochen wird). Standardmäßig aus.',
+  voiceNotifyEnabled: 'Arbeitsstatus sprechen',
+  voiceNotifyEnabledHint:
+    'Spricht eine konfigurierte Arbeitsstatus-Zeile, wenn eine Aufgabe abgeschlossen ist, fehlschlägt oder auf Ihre Bestätigung wartet. Wie Systembenachrichtigungen wird nur gesprochen, während Sie nicht auf dieser Seite sind (weggewechselt, ohne Fokus, minimiert) – keine Unterbrechung, während Sie auf den Bildschirm schauen. Nur die konfigurierte Zeile wird gesprochen, nie das Aufgabendetail. Standardmäßig aus.',
   voiceNameLabel: 'Stimme',
+  voiceVolumeLabel: 'Lautstärke',
+  voiceVolumeHint:
+    'Wiedergabelautstärke als Dezimalzahl 0–1: 1 ist die maximale Lautstärke (100 %), 0 ist stumm. Ändert nur die Lautheit und synthetisiert kein Audio neu, kostet also nichts extra. Alle vier Arten von Sprachausgabe teilen sich diese eine Lautstärke.',
   physicsTitle: 'Physik (Zieh- und Wurfgefühl)',
   physicsHint:
     'Globaler Standard für alle Pets (ein Pet-Pack kann ihn in seiner Art-Datei überschreiben); wird beim „Speichern" in die Benutzerkonfiguration geschrieben (kein sofortiges Schreiben). Im Browser sofort wirksam, im Desktop-Modus, sobald das Speichern die Pet-Fenster neu lädt.',
-  'physics.gravity': 'Schwerkraft (gravity)',
+  mobileTitle: 'Mobil-Effekte',
+  mobileHint:
+    'Nur im Handy-Browser sinnvoll: Vibration braucht einen Motor, die beiden Bewegungs-Schalter brauchen Neigungs-/Beschleunigungssensoren, und Sensoren gibt es nur über HTTPS oder localhost.',
+  'physics.gravity': 'Schwerkraft',
   'physics.gravityHint': 'px/s², größer = fällt schneller; 0 = schwerelos (fliegt geradeaus weiter)',
-  'physics.restitution': 'Elastizität (restitution)',
+  'physics.restitution': 'Elastizität',
   'physics.restitutionHint':
     '0–1, Geschwindigkeitsanteil beim Abprallen von Wand/Boden (1 = voll elastisch, 0 = bleibt sofort stehen)',
-  'physics.groundFriction': 'Bodenreibung (groundFriction)',
-  'physics.groundFrictionHint': '/s, Abklingen der horizontalen Geschwindigkeit am Boden; 0 = eisglatt, keine Bremse',
-  'physics.throwPower': 'Wurfkraft (throwPower)',
+  'physics.groundFriction': 'Kontaktreibung',
+  'physics.groundFrictionHint':
+    '/s, Abklingen der Geschwindigkeit entlang jeder Kontaktfläche (Wand, Boden, Decke); 0 = überall eisglatt',
+  'physics.throwPower': 'Wurfkraft',
   'physics.throwPowerHint':
     '> 0, Gesamtfaktor für Federfolge und Abwurfgeschwindigkeit (1 = Standard; höher = folgt enger, wirft härter)',
-  physicsCeilingBounce: 'Deckenabprall (ceilingBounce)',
+  physicsCeilingBounce: 'Deckenabprall',
   physicsCeilingBounceHint: 'Aus: Würfe können oben aus dem Bildschirm fliegen (die Schwerkraft holt sie zurück)',
-  physicsPetCollision: 'Pet-Kollisionen (petCollision)',
+  physicsPetCollision: 'Pet-Kollisionen',
   physicsPetCollisionHint: 'Ein fliegendes Pet prallt mit Impulserhaltung von anderen ab (Masse ∝ Größe²)',
   physicsHaptic: 'Kollisions-Vibration',
   physicsHapticHint:
     'Ein Impuls pro Treffer (Wand, Boden, Decke, andere Pets). Funktioniert in Chrome/Edge; nicht auf iOS oder in WebView-Hüllen wie Via. „Nicht stören“ blockiert die Vibration.',
+  physicsTilt: 'Schwerkraft per Neigung',
+  physicsTiltHint:
+    'Handy neigen: die Schwerkraft folgt der Neigung (Betrag = der Wert oben). Bei Schwerkraft 0 bewirkt Neigen nichts. Benötigt HTTPS/localhost.',
+  physicsShake: 'Schütteln zum Werfen',
+  physicsShakeHint:
+    'Schütteln schleudert den Pet in Wurfrichtung; die Stärke folgt throwPower. Unabhängig von der Schwerkraft, funktioniert also auch bei 0. Benötigt HTTPS/localhost.',
   invalidPhysics: 'Bitte Physikwerte prüfen: Schwerkraft / Bodenreibung ≥ 0, Elastizität 0–1, Wurfkraft > 0.',
   fontTitle: 'Aussehen & Schrift',
   fontHint:
@@ -182,7 +229,7 @@ export const de: Record<Key, string> = {
   'font.simsun': 'SimSun',
   'font.comic': 'Comic Sans MS',
   'font.system': 'Systemstandard',
-  modelTitle: 'KI-Modelle & Chat-Kontext',
+  modelTitle: 'Chat & Modelle',
   modelHint:
     'Welches Modell Flüstern und Chat jeweils nutzen und wie viel Verlauf jeder Chat-Aufruf mitführt. „Aktueller Konversation folgen" = das Modell, das Ihre aktuelle Konversation verwendet (Standard). Globaler Standard: gilt für alle Pets, ein Pet-Pack kann ihn in seiner Art-Datei überschreiben. Die Optionen stammen aus derselben Quelle wie die Modellauswahl von DSH und werden vom Host live geliefert.',
   modelFollow: 'Aktueller Konversation folgen',
@@ -237,5 +284,12 @@ export const de: Record<Key, string> = {
     '2. Das Plugin selbst entfernen (im Terminal ausführen; entfernt es auch aus der Bundle-Schicht des Profils):',
   uninstallStep3:
     '3. Die obigen Orte nach Bedarf löschen: Caches sind unschädlich; „Plugin-Benutzerdaten" löschen kostet Konfiguration und Chat-Gedächtnis (vorher main-config.jsonc sichern, wenn Sie es behalten wollen).',
+  motionTitle: 'Aktionshäufigkeit',
+  motionHint:
+    'Vier Felder: Leerlauf / Drehen / Bewegen sind editierbar, die Zufallsaktion wird berechnet (100 − die anderen drei). Globaler Standard für alle Pets; ein Pet-Pack kann ihn in seiner Art-Datei überschreiben.',
+  'motion.idle': 'Leerlauf',
+  'motion.turn': 'Drehen',
+  'motion.move': 'Bewegen',
+  'motion.action': 'Zufallsaktion',
   uninstallCmd: 'dsh plugin --profile {profile} remove dsh-pet',
 };

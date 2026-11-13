@@ -73,6 +73,10 @@ export interface Animations {
   /** 睡觉动作套（可选）：没写 = 该条目没有睡觉功能，右键菜单不出现「睡觉」。
    *  写了就「整套随机 → 段内随机」取，结构见 {@link SleepSet}。 */
   sleep?: SleepSet[];
+  /** 内置玩法「吃白饭」的动画（可选）：键名即玩法 id，值是**恰好 5 个**动画名，
+   *  按位置对应：跑向屏幕底部、追饭时的侧身跑、到位后等开饭、吃到碗饭、吃饭团。
+   *  不写 = 该条目没有这个玩法；槽位数与顺序是玩法契约（代码按索引取），名字只是素材文件名。 */
+  baifan?: string[];
 }
 
 /** 一只宠物（与 config.jsonc 的 pets[i] 同形，position 嵌套）。
@@ -86,9 +90,9 @@ export interface Pet {
    *  缺失或留空按该宠物 id 处理并告警。 */
   name: string;
   size: number;
-  /** 人物占屏宽上限（%，默认 100，不设上限）：按本体占屏换算出画框宽，`size` 仍是画框上限。
+  /** 人物占屏宽上限（%，默认 20，不设上限）：按本体占屏换算出画框宽，`size` 仍是画框上限。
    *  100 ≈ 不限制（宽窗口下与按 px 显示一致）；填 150 人物会宽于屏幕，但画框仍被 `size` 夹住。
-   *  小于 1 或非数字回落到 100。只作用于浏览器半侧——桌面透明窗始终用 `size`。 */
+   *  小于 1 或非数字回落到 20。只作用于浏览器半侧——桌面透明窗始终用 `size`。 */
   sizePercent?: number;
   /** 是否启用余额功能：true = 触发余额动画并显示余额气泡，false = 该宠物完全禁用余额。缺失即配置错误 */
   balanceEnabled: boolean;
@@ -165,14 +169,21 @@ export interface PhysicsParams {
   gravity: number;
   /** 碰壁反弹恢复系数 0~1（1 = 完全弹性，0 = 撞上即停；墙与地共用） */
   restitution: number;
-  /** 地面水平摩擦（/s）：落地时水平速度的衰减率，0 = 无摩擦 */
+  /** 接触面切向摩擦（/s）：撞墙、落地、撞顶后沿接触面方向的速度衰减率，0 = 四面都像冰面 */
   groundFriction: number;
   /** 顶部是否反弹：false = 顶部无边界，抛掷可飞出屏幕顶部（重力仍会拉回落） */
   ceilingBounce: boolean;
   /** 总力度（拖拽与抛掷的输出增益）：弹簧 K/C、甩抛初速与软上限整体 ×p（1.0 = 现状，必须 > 0） */
   throwPower: number;
-  /** 多宠物互相碰撞开关：true = 飞行中的宠物撞到其它宠物时按动量守恒弹开；false = 互相穿过（默认） */
+  /** 多宠物互相碰撞开关：true（默认）= 飞行中的宠物撞到其它宠物时按动量守恒弹开；false = 互相穿过 */
   petCollision: boolean;
+  /** 倾斜控制重力：true（默认）= 手机倾斜方向代替固定向下的重力方向（大小仍由 gravity 决定，竖直时取满值；
+   *  gravity 为 0 时倾斜没有可用的量，等同关闭）；false = 重力恒竖直向下。
+   *  仅浏览器半侧生效，且传感器只在安全上下文（HTTPS / localhost）可用；缺键按 true。 */
+  tiltGravity?: boolean;
+  /** 摇一摇抛出：true（默认）= 摇一摇沿甩动方向把宠物甩出去（力度 = 基准 × throwPower），与重力大小无关，
+   *  所以 gravity 为 0 时也能用；false = 不读加速度计。同样只在安全上下文可用。缺键按 true。 */
+  shakeThrow?: boolean;
   /** 碰撞触觉反馈：true（默认）时撞墙 / 落地 / 撞顶与宠物互撞各震一下。
    *  仅浏览器半侧生效，且要求环境有 Vibration API——iOS 与桌面端没有，静默跳过。
    *  缺省按 true；旧配置里没有这个键也算开。 */
@@ -199,6 +210,9 @@ export interface FontConfig {
 export interface ClientConfig {
   /** 系统通知总开关：true = 对话完成 / 生成失败 / 输出截断 / 权限申请 / 用户选择时弹出通知；缺失即配置错误 */
   notificationsEnabled: boolean;
+  /** 前台聚焦时也提醒：true = 页面可见且持有焦点时照常弹通知、照常播报工作状态语音；
+   *  false（默认）= 只在走开或被遮住时提醒。缺这个键按 false 处理，旧配置行为不变。 */
+  notifyWhenFocused: boolean;
   /** 点击音效开关：true = 点击宠物时播放内置 click-duck.wav（音量 0.5、100ms 内去重），false = 静音。
    *  内置默认 false（默认静音，不突袭既有用户）。只读 main 条目这一份，pet pack 不单独覆盖。 */
   clickSoundEnabled: boolean;
